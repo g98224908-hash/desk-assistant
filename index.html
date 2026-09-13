@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>دستیار رومیزی</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: sans-serif; background:#0f1115; color:#fff; text-align:center;
+         padding:20px; margin:0; min-height:100vh; }
+  h2 { font-weight:600; font-size:22px; margin:0 0 4px; }
+  .status { font-size:13px; color:#8b93a3; margin-bottom:24px; }
+  .section-title { font-size:13px; color:#8b93a3; margin:24px 0 12px; text-align:right; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+  button { padding:18px 8px; font-size:15px; border:none; border-radius:14px;
+           background:#1c2733; color:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.3); }
+  button:active { background:#2196F3; transform:scale(0.97); }
+  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+           background:#2196F3; color:#fff; padding:10px 20px; border-radius:20px;
+           font-size:13px; opacity:0; transition:opacity 0.3s; pointer-events:none; }
+  .toast.show { opacity:1; }
+</style>
+</head>
+<body>
+<h2>دستیار رومیزی</h2>
+<div class="status">کنترل از هرجا</div>
+
+<div class="grid">
+<button onclick="btn(1)">دما</button>
+<button onclick="btn(2)">ساعت</button>
+<button onclick="btn(5)">آب‌وهوا</button>
+<button onclick="btn(6)">تاریخ شمسی</button>
+<button onclick="btn(7)">تعطیلی امروز</button>
+<button onclick="btn(8)">تعطیلی فردا</button>
+<button onclick="btn(3)">جمله ۱</button>
+<button onclick="btn(4)">جمله ۲</button>
+</div>
+
+<div class="section-title">موزیک</div>
+<div class="grid">
+<button onclick="btn(9)">پخش / توقف</button>
+<button onclick="btn(10)">توقف کامل</button>
+<button onclick="btn(11)">آهنگ بعدی</button>
+<button onclick="btn(12)">آهنگ قبلی</button>
+</div>
+
+<div class="section-title">صدا</div>
+<div class="grid3">
+<button onclick="btn(13)">صدا زیاد</button>
+<button onclick="btn(14)">صدا کم</button>
+<button onclick="btn(15)">قطع صدا</button>
+</div>
+
+<div id="toast" class="toast">ارسال شد</div>
+
+<script>
+const PROXY_URL = "https://desk-assistant-proxy.kdkdke126.workers.dev";
+
+function btn(id) {
+  fetch(PROXY_URL + "/?id=" + id)
+    .then(r => r.text()).then(t => { document.getElementById("toast").innerText = t; showToast(); });
+}
+
+function showToast() {
+  const t = document.getElementById("toast");
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1200);
+}
+</script>
+</body>
+</html>
