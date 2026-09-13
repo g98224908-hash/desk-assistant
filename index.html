@@ -20,21 +20,39 @@
            background:#2196F3; color:#fff; padding:10px 20px; border-radius:20px;
            font-size:13px; opacity:0; transition:opacity 0.3s; pointer-events:none; }
   .toast.show { opacity:1; }
+  #lockScreen { position:fixed; inset:0; background:#0f1115; display:flex;
+                flex-direction:column; align-items:center; justify-content:center;
+                gap:14px; z-index:100; padding:20px; }
+  #lockScreen input { padding:14px; font-size:16px; border-radius:12px; border:none;
+                       width:220px; text-align:center; }
+  #lockScreen button { padding:14px 20px; font-size:15px; border:none; border-radius:12px;
+                        background:#2196F3; color:#fff; width:220px; }
+  #lockError { color:#ff6b6b; font-size:13px; min-height:18px; }
+  #appContent { display:none; }
 </style>
 </head>
 <body>
+
+<div id="lockScreen">
+  <h2>دستیار رومیزی</h2>
+  <input type="password" id="passInput" placeholder="رمز عبور" autofocus>
+  <button onclick="checkPass()">ورود</button>
+  <div id="lockError"></div>
+</div>
+
+<div id="appContent">
 <h2>دستیار رومیزی</h2>
 <div class="status">کنترل از هرجا</div>
 
 <div class="grid">
 <button onclick="btn(1)">دما</button>
 <button onclick="btn(2)">ساعت</button>
-<button onclick="btn(5)">آب‌وهوا</button>
-<button onclick="btn(6)">تاریخ شمسی</button>
-<button onclick="btn(7)">تعطیلی امروز</button>
-<button onclick="btn(8)">تعطیلی فردا</button>
-<button onclick="btn(3)">جمله ۱</button>
-<button onclick="btn(4)">جمله ۲</button>
+<button onclick="btn(3)">آب‌وهوا</button>
+<button onclick="btn(4)">تاریخ شمسی</button>
+<button onclick="btn(5)">تعطیلی امروز</button>
+<button onclick="btn(6)">تعطیلی فردا</button>
+<button onclick="btn(7)">جمله ۱</button>
+<button onclick="btn(8)">جمله ۲</button>
 </div>
 
 <div class="section-title">موزیک</div>
@@ -53,9 +71,31 @@
 </div>
 
 <div id="toast" class="toast">ارسال شد</div>
+</div>
 
 <script>
 const PROXY_URL = "https://desk-assistant-proxy.kdkdke126.workers.dev";
+const SITE_PASSWORD = "Mm17881788@";
+
+function checkPass() {
+  const val = document.getElementById("passInput").value;
+  if (val === SITE_PASSWORD) {
+    localStorage.setItem("deskAssistantUnlocked", "1");
+    document.getElementById("lockScreen").style.display = "none";
+    document.getElementById("appContent").style.display = "block";
+  } else {
+    document.getElementById("lockError").innerText = "رمز اشتباهه";
+  }
+}
+
+document.getElementById("passInput").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") checkPass();
+});
+
+if (localStorage.getItem("deskAssistantUnlocked") === "1") {
+  document.getElementById("lockScreen").style.display = "none";
+  document.getElementById("appContent").style.display = "block";
+}
 
 function btn(id) {
   fetch(PROXY_URL + "/?id=" + id)
