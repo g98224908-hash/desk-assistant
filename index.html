@@ -40,6 +40,12 @@
                background:#1c2733; color:#fff; }
   #micBtn, #sendBtn { padding:14px 16px; border-radius:12px; border:none; background:#2196F3; color:#fff; }
   #micBtn.listening { background:#ff6b6b; }
+
+  #secretBox { display:none; margin:16px 0; gap:8px; }
+  #secretBox input { flex:1; padding:12px; font-size:14px; border-radius:10px; border:none;
+                      background:#1c2733; color:#fff; text-align:center; }
+  #secretBox button { padding:12px 16px; background:#2196F3; }
+  .partyOn button.active { background:#ff9800; }
 </style>
 </head>
 <body>
@@ -52,8 +58,13 @@
 </div>
 
 <div id="appContent">
-<h2>دستیار رومیزی</h2>
+<h2 id="titleTap" onclick="titleTap()">دستیار رومیزی</h2>
 <div class="status">کنترل از هرجا</div>
+
+<div id="secretBox" class="chatRow">
+  <input type="text" id="secretInput" placeholder="رمز مخفی رو وارد کن">
+  <button onclick="checkSecret()">تایید</button>
+</div>
 
 <div class="grid">
 <button onclick="btn(1)">دما</button>
@@ -79,6 +90,16 @@
 <button onclick="btn(13)">صدا زیاد</button>
 <button onclick="btn(14)">صدا کم</button>
 <button onclick="btn(15)">قطع صدا</button>
+</div>
+
+<div class="section-title">قابلیت‌های ویژه</div>
+<div class="grid">
+<button onclick="btn(16)">آمار من</button>
+<button onclick="btn(17)">فال حافظ</button>
+</div>
+<div class="grid" id="partyGrid">
+<button id="partyOnBtn" onclick="setParty(true)">حالت مهمونی روشن</button>
+<button id="partyOffBtn" onclick="setParty(false)">حالت مهمونی خاموش</button>
 </div>
 
 <div class="section-title">دستیار هوشمند</div>
@@ -127,6 +148,45 @@ function showToast() {
   t.classList.add("show");
   setTimeout(() => t.classList.remove("show"), 1200);
 }
+
+// --- حالت مهمونی ---
+function setParty(on) {
+  btn(on ? 23 : 24);
+  document.getElementById("partyOnBtn").classList.toggle("active", on);
+  document.getElementById("partyOffBtn").classList.toggle("active", !on);
+}
+
+// --- رمز مخفی (روی عنوان بالای صفحه ۵ بار ضربه بزن تا ظاهر بشه) ---
+const SECRET_CODES = {
+  "konami": 30,
+  "mohandes": 31
+};
+let tapCount = 0;
+let tapTimer = null;
+
+function titleTap() {
+  tapCount++;
+  clearTimeout(tapTimer);
+  tapTimer = setTimeout(() => { tapCount = 0; }, 1500);
+  if (tapCount >= 5) {
+    tapCount = 0;
+    const box = document.getElementById("secretBox");
+    box.style.display = "flex";
+    document.getElementById("secretInput").focus();
+  }
+}
+
+function checkSecret() {
+  const val = document.getElementById("secretInput").value.trim().toLowerCase();
+  const id = SECRET_CODES[val] || 32;
+  btn(id);
+  document.getElementById("secretInput").value = "";
+  document.getElementById("secretBox").style.display = "none";
+}
+
+document.getElementById("secretInput").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") checkSecret();
+});
 
 function addMsg(text, who) {
   const box = document.getElementById("chatBox");
