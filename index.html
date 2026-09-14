@@ -18,8 +18,7 @@
   button:active { background:#2196F3; transform:scale(0.97); }
   .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
            background:#2196F3; color:#fff; padding:10px 20px; border-radius:20px;
-           font-size:13px; opacity:0; transition:opacity 0.3s; pointer-events:none;
-           max-width:85%; }
+           font-size:13px; opacity:0; transition:opacity 0.3s; pointer-events:none; }
   .toast.show { opacity:1; }
   #lockScreen { position:fixed; inset:0; background:#0f1115; display:flex;
                 flex-direction:column; align-items:center; justify-content:center;
@@ -31,34 +30,16 @@
   #lockError { color:#ff6b6b; font-size:13px; min-height:18px; }
   #appContent { display:none; }
 
-  .special-btn { background:#2a1f3d; }
-  .party-on { background:#e91e63 !important; }
-
-  #aiBox { text-align:right; background:#1c2733; border-radius:14px; padding:14px; margin-top:12px; }
-  #aiBox textarea { width:100%; min-height:60px; border-radius:10px; border:none;
-                     padding:10px; font-family:sans-serif; font-size:14px; margin-bottom:8px; }
-  #aiAnswer { font-size:14px; line-height:1.7; margin-top:10px; min-height:20px; }
-  .mic-btn { background:#1a3a2e; font-size:22px; width:100%; }
-  .mic-btn.listening { background:#c0392b; animation:pulse 1s infinite; }
-  @keyframes pulse { 0%{opacity:1;} 50%{opacity:0.5;} 100%{opacity:1;} }
-
-  #triviaBox, #leaderboardBox { display:none; text-align:right; background:#1c2733;
-        border-radius:14px; padding:14px; margin-top:12px; }
-  #triviaQuestion { font-size:14px; margin-bottom:10px; line-height:1.6; }
-  .triviaAnswers { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-  .triviaAnswers button { font-size:13px; padding:12px 6px; }
-  #triviaResult { margin-top:10px; font-size:13px; min-height:18px; }
-
-  #lbList { font-size:13px; }
-  #lbList div { display:flex; justify-content:space-between; padding:6px 0;
-                border-bottom:1px solid #2a3644; }
-
-  #secretToggle { position:fixed; bottom:6px; right:6px; width:14px; height:14px;
-                  opacity:0.15; background:transparent; border:none; padding:0; }
-  #secretBox { display:none; position:fixed; bottom:30px; right:10px; left:10px;
-               background:#1c2733; border-radius:12px; padding:10px; z-index:50; }
-  #secretBox input { width:100%; padding:10px; border-radius:8px; border:none;
-                      text-align:center; margin-bottom:6px; }
+  #chatBox { text-align:right; background:#1c2733; border-radius:14px; padding:12px;
+             min-height:120px; max-height:260px; overflow-y:auto; margin-bottom:10px; }
+  .msg { padding:8px 12px; border-radius:10px; margin:6px 0; font-size:14px; line-height:1.5; }
+  .msg.user { background:#2196F3; margin-left:30px; }
+  .msg.ai { background:#2a3542; margin-right:30px; }
+  .chatRow { display:flex; gap:8px; }
+  #chatInput { flex:1; padding:14px; font-size:15px; border-radius:12px; border:none;
+               background:#1c2733; color:#fff; }
+  #micBtn, #sendBtn { padding:14px 16px; border-radius:12px; border:none; background:#2196F3; color:#fff; }
+  #micBtn.listening { background:#ff6b6b; }
 </style>
 </head>
 <body>
@@ -100,56 +81,21 @@
 <button onclick="btn(15)">قطع صدا</button>
 </div>
 
-<div class="section-title">ویژه</div>
-<div class="grid">
-<button class="special-btn" onclick="btn(16)">📊 آمار من</button>
-<button class="special-btn" onclick="btn(17)">📖 فال حافظ</button>
-<button class="special-btn" onclick="startTrivia()">🎬 مسابقه فیلم/بازی</button>
-<button class="special-btn" id="partyBtn" onclick="toggleParty()">🎉 حالت مهمونی</button>
-</div>
-<div class="grid">
-<button class="special-btn" onclick="loadLeaderboard()" style="grid-column:1 / -1">🏆 جدول امتیازات</button>
-</div>
-
-<div class="section-title">🤖 هوش مصنوعی</div>
-<div id="aiBox">
-  <button class="mic-btn" id="micBtn" onclick="startVoice()">🎙️ صحبت کن</button>
-  <textarea id="aiInput" placeholder="یا اینجا هم می‌تونی تایپ کنی..."></textarea>
-  <button onclick="askAIFromInput()" style="width:100%">بپرس</button>
-  <div id="aiAnswer"></div>
-</div>
-
-<div id="triviaBox">
-  <div id="triviaQuestion">در حال گرفتن سؤال...</div>
-  <div class="triviaAnswers" id="triviaAnswers"></div>
-  <div id="triviaResult"></div>
-</div>
-
-<div id="leaderboardBox">
-  <div class="section-title" style="margin-top:0">🏆 رکورددارها</div>
-  <div id="lbList">در حال بارگذاری...</div>
+<div class="section-title">دستیار هوشمند</div>
+<div id="chatBox"></div>
+<div class="chatRow">
+  <button id="micBtn" onclick="toggleMic()">🎤</button>
+  <input type="text" id="chatInput" placeholder="پیامت رو بنویس یا میکروفون بزن...">
+  <button id="sendBtn" onclick="sendChat()">ارسال</button>
 </div>
 
 <div id="toast" class="toast">ارسال شد</div>
 </div>
 
-<button id="secretToggle" onclick="toggleSecretBox()"></button>
-<div id="secretBox">
-  <input type="text" id="secretInput" placeholder="رمز مخفی...">
-  <button onclick="submitSecret()" style="width:100%">ارسال</button>
-</div>
-
 <script>
 const PROXY_URL = "https://desk-assistant-proxy.kdkdke126.workers.dev";
+const AI_URL = "https://desk-assistant-ai.kdkdke126.workers.dev";
 const SITE_PASSWORD = "Mm17881788@";
-
-const AIO_USERNAME = "Jsjsis";
-const AIO_KEY = "aio_zkEn29rri6rRPXTP2ZliJDtP73rh";
-const AIO_LEADERBOARD_FEED = "leaderboard";
-
-const DAHL_URL = "https://inference.dahl.global/v1/chat/completions";
-const DAHL_KEY = "dahl_PkJ9bYdgonE39mZ9hrPSKWtnqRQzvGAAZ";
-const DAHL_MODEL = "MiniMaxAI/MiniMax-M2.7";
 
 function checkPass() {
   const val = document.getElementById("passInput").value;
@@ -173,8 +119,7 @@ if (localStorage.getItem("deskAssistantUnlocked") === "1") {
 
 function btn(id) {
   fetch(PROXY_URL + "/?id=" + id)
-    .then(r => r.text()).then(t => { document.getElementById("toast").innerText = t; showToast(); })
-    .catch(() => { document.getElementById("toast").innerText = "خطا در ارسال"; showToast(); });
+    .then(r => r.text()).then(t => { document.getElementById("toast").innerText = t; showToast(); });
 }
 
 function showToast() {
@@ -183,216 +128,85 @@ function showToast() {
   setTimeout(() => t.classList.remove("show"), 1200);
 }
 
-let partyMode = localStorage.getItem("partyMode") === "1";
-updatePartyBtn();
-function toggleParty() {
-  partyMode = !partyMode;
-  localStorage.setItem("partyMode", partyMode ? "1" : "0");
-  btn(partyMode ? 23 : 24);
-  updatePartyBtn();
-}
-function updatePartyBtn() {
-  const b = document.getElementById("partyBtn");
-  b.classList.toggle("party-on", partyMode);
-  b.innerText = partyMode ? "🎉 مهمونی روشنه" : "🎉 حالت مهمونی";
+function addMsg(text, who) {
+  const box = document.getElementById("chatBox");
+  const div = document.createElement("div");
+  div.className = "msg " + who;
+  div.innerText = text;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
 }
 
-let currentTriviaAnswer = "";
-function startTrivia() {
-  const box = document.getElementById("triviaBox");
-  const qEl = document.getElementById("triviaQuestion");
-  const aEl = document.getElementById("triviaAnswers");
-  const rEl = document.getElementById("triviaResult");
-  box.style.display = "block";
-  rEl.innerText = "";
-  qEl.innerText = "در حال گرفتن سؤال...";
-  aEl.innerHTML = "";
-
-  const category = Math.random() < 0.5 ? 11 : 15;
-  fetch(`https://opentdb.com/api.php?amount=1&category=${category}&type=multiple`)
-    .then(r => r.json())
-    .then(data => {
-      const q = data.results[0];
-      const decode = s => { const t = document.createElement("textarea"); t.innerHTML = s; return t.value; };
-      currentTriviaAnswer = decode(q.correct_answer);
-      qEl.innerText = decode(q.question);
-      const answers = [...q.incorrect_answers.map(decode), currentTriviaAnswer];
-      answers.sort(() => Math.random() - 0.5);
-      aEl.innerHTML = "";
-      answers.forEach(ans => {
-        const b = document.createElement("button");
-        b.innerText = ans;
-        b.onclick = () => answerTrivia(ans);
-        aEl.appendChild(b);
-      });
-    })
-    .catch(() => { qEl.innerText = "مشکل تو گرفتن سؤال، دوباره امتحان کن"; });
-}
-
-function answerTrivia(chosen) {
-  const rEl = document.getElementById("triviaResult");
-  if (chosen === currentTriviaAnswer) {
-    rEl.innerText = "✅ درست بود!";
-    btn(25);
-    saveScore(1);
-  } else {
-    rEl.innerText = "❌ جواب درست: " + currentTriviaAnswer;
-    btn(26);
-    saveScore(0);
-  }
-}
-
-function saveScore(won) {
-  let name = localStorage.getItem("playerName");
-  if (!name) {
-    name = prompt("اسمت چیه؟ (برای جدول امتیازات)") || "ناشناس";
-    localStorage.setItem("playerName", name);
-  }
-  let myScore = parseInt(localStorage.getItem("myScore") || "0");
-  if (won) myScore++;
-  localStorage.setItem("myScore", myScore);
-
-  fetch(`https://io.adafruit.com/api/v2/${AIO_USERNAME}/feeds/${AIO_LEADERBOARD_FEED}/data`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-AIO-Key": AIO_KEY },
-    body: JSON.stringify({ value: `${name}:${myScore}` })
-  }).catch(() => {});
-}
-
-function loadLeaderboard() {
-  const box = document.getElementById("leaderboardBox");
-  const list = document.getElementById("lbList");
-  box.style.display = "block";
-  list.innerText = "در حال بارگذاری...";
-
-  fetch(`https://io.adafruit.com/api/v2/${AIO_USERNAME}/feeds/${AIO_LEADERBOARD_FEED}/data?limit=100`, {
-    headers: { "X-AIO-Key": AIO_KEY }
-  })
-    .then(r => r.json())
-    .then(rows => {
-      const best = {};
-      rows.forEach(row => {
-        const parts = (row.value || "").split(":");
-        if (parts.length !== 2) return;
-        const [name, score] = [parts[0], parseInt(parts[1])];
-        if (!best[name] || score > best[name]) best[name] = score;
-      });
-      const sorted = Object.entries(best).sort((a, b) => b[1] - a[1]).slice(0, 10);
-      if (sorted.length === 0) { list.innerText = "هنوز کسی امتیازی نگرفته!"; return; }
-      list.innerHTML = "";
-      sorted.forEach(([name, score], i) => {
-        const row = document.createElement("div");
-        row.innerHTML = `<span>${i + 1}. ${name}</span><span>${score}</span>`;
-        list.appendChild(row);
-      });
-    })
-    .catch(() => { list.innerText = "مشکل تو بارگذاری جدول"; });
-}
-
-async function askAI(userText) {
-  const res = await fetch(DAHL_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer " + DAHL_KEY
-    },
-    body: JSON.stringify({
-      model: DAHL_MODEL,
-      messages: [
-        { role: "system", content: "تو یه دستیار خانگی فارسی‌زبان، شوخ و صمیمی هستی. کوتاه (حداکثر ۲-۳ جمله) و طبیعی جواب بده." },
-        { role: "user", content: userText }
-      ]
-    })
-  });
-  const data = await res.json();
-  return data.choices[0].message.content;
-}
-
-function askAIFromInput() {
-  const text = document.getElementById("aiInput").value.trim();
+function sendChat() {
+  const input = document.getElementById("chatInput");
+  const text = input.value.trim();
   if (!text) return;
-  runAI(text);
+  addMsg(text, "user");
+  input.value = "";
+  addMsg("...", "ai");
+
+  fetch(AI_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: text })
+  })
+  .then(r => r.json())
+  .then(data => {
+    const box = document.getElementById("chatBox");
+    box.removeChild(box.lastChild);
+    addMsg(data.answer || "جوابی نیومد", "ai");
+  })
+  .catch(() => {
+    const box = document.getElementById("chatBox");
+    box.removeChild(box.lastChild);
+    addMsg("اتصال برقرار نشد", "ai");
+  });
 }
 
-async function runAI(text) {
-  const ansEl = document.getElementById("aiAnswer");
-  ansEl.innerText = "در حال فکر کردن...";
-  try {
-    const answer = await askAI(text);
-    ansEl.innerText = answer;
-  } catch (e) {
-    ansEl.innerText = "مشکلی تو اتصال به هوش مصنوعی پیش اومد";
-  }
-}
+document.getElementById("chatInput").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") sendChat();
+});
 
-const VOICE_KEYWORDS = [
-  { words: ["دما", "درجه"], id: 1 },
-  { words: ["ساعت", "زمان"], id: 2 },
-  { words: ["هوا", "آب و هوا", "آبوهوا"], id: 3 },
-  { words: ["تاریخ"], id: 4 },
-  { words: ["تعطیل امروز", "امروز تعطیل"], id: 5 },
-  { words: ["تعطیل فردا", "فردا تعطیل"], id: 6 },
-  { words: ["پخش", "موزیک", "آهنگ پخش"], id: 9 },
-  { words: ["آهنگ بعد", "بعدی"], id: 11 },
-  { words: ["آهنگ قبل", "قبلی"], id: 12 },
-  { words: ["صدا زیاد"], id: 13 },
-  { words: ["صدا کم"], id: 14 },
-  { words: ["قطع صدا", "ساکت"], id: 15 },
-  { words: ["آمار"], id: 16 },
-  { words: ["فال", "حافظ"], id: 17 },
-];
+let recognition = null;
+let listening = false;
 
-function startVoice() {
-  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRec) {
-    document.getElementById("toast").innerText = "مرورگرت از تشخیص صدا پشتیبانی نمی‌کنه";
-    showToast();
+function toggleMic() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("مرورگرت از میکروفون پشتیبانی نمی‌کنه");
     return;
   }
-  const rec = new SpeechRec();
-  rec.lang = "fa-IR";
-  rec.interimResults = false;
-  const micBtn = document.getElementById("micBtn");
-  micBtn.classList.add("listening");
+  if (listening) {
+    recognition.stop();
+    return;
+  }
+  recognition = new SpeechRecognition();
+  recognition.lang = "fa-IR";
+  recognition.interimResults = false;
 
-  rec.onresult = (event) => {
-    const text = event.results[0][0].transcript;
-    document.getElementById("aiInput").value = text;
-    const match = VOICE_KEYWORDS.find(k => k.words.some(w => text.includes(w)));
-    if (match) {
-      document.getElementById("toast").innerText = "شنیدم: " + text;
-      showToast();
-      setTimeout(() => btn(match.id), 500);
-    } else {
-      runAI(text);
-    }
+  recognition.onstart = function() {
+    listening = true;
+    document.getElementById("micBtn").classList.add("listening");
   };
-  rec.onerror = () => { micBtn.classList.remove("listening"); };
-  rec.onend = () => { micBtn.classList.remove("listening"); };
-  rec.start();
-}
 
-function toggleSecretBox() {
-  const b = document.getElementById("secretBox");
-  b.style.display = (b.style.display === "block") ? "none" : "block";
-  if (b.style.display === "block") document.getElementById("secretInput").focus();
-}
+  recognition.onresult = function(event) {
+    const said = event.results[0][0].transcript;
+    document.getElementById("chatInput").value = said;
+    sendChat();
+  };
 
-const SECRET_CODES = {
-  "کونامی": 30,
-  "بالا بالا پایین پایین چپ راست چپ راست": 30,
-  "دیباگ": 31,
-  "engineer": 31
-};
+  recognition.onerror = function() {
+    listening = false;
+    document.getElementById("micBtn").classList.remove("listening");
+  };
 
-function submitSecret() {
-  const val = document.getElementById("secretInput").value.trim();
-  const id = SECRET_CODES[val];
-  if (id) { btn(id); } else { btn(32); }
-  document.getElementById("secretInput").value = "";
-  document.getElementById("secretBox").style.display = "none";
+  recognition.onend = function() {
+    listening = false;
+    document.getElementById("micBtn").classList.remove("listening");
+  };
+
+  recognition.start();
 }
 </script>
 </body>
 </html>
-
