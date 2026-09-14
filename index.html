@@ -46,6 +46,16 @@
                       background:#1c2733; color:#fff; text-align:center; }
   #secretBox button { padding:12px 16px; background:#2196F3; }
   .partyOn button.active { background:#ff9800; }
+
+  #quizBox { display:none; text-align:right; background:#1c2733; border-radius:14px;
+             padding:14px; margin-top:10px; }
+  #quizProgress { font-size:12px; color:#8b93a3; margin-bottom:8px; }
+  #quizQuestion { font-size:15px; margin-bottom:10px; line-height:1.6; }
+  #quizOptions { display:flex; flex-direction:column; gap:8px; }
+  #quizOptions button { text-align:right; width:100%; }
+  #leaderboardBox { display:none; text-align:right; background:#1c2733; border-radius:14px;
+                     padding:14px; margin-top:10px; font-size:14px; }
+  .lbRow { padding:6px 0; border-bottom:1px solid #2a3542; }
 </style>
 </head>
 <body>
@@ -101,6 +111,18 @@
 <button id="partyOnBtn" onclick="setParty(true)">حالت مهمونی روشن</button>
 <button id="partyOffBtn" onclick="setParty(false)">حالت مهمونی خاموش</button>
 </div>
+
+<div class="section-title">مسابقه و امتیازات</div>
+<div class="grid">
+<button onclick="startQuiz()">🎮 شروع مسابقه</button>
+<button onclick="showLeaderboard()">🏆 جدول امتیازات</button>
+</div>
+<div id="quizBox">
+  <div id="quizProgress"></div>
+  <div id="quizQuestion"></div>
+  <div id="quizOptions"></div>
+</div>
+<div id="leaderboardBox"></div>
 
 <div class="section-title">دستیار هوشمند</div>
 <div id="chatBox"></div>
@@ -187,6 +209,110 @@ function checkSecret() {
 document.getElementById("secretInput").addEventListener("keydown", function(e) {
   if (e.key === "Enter") checkSecret();
 });
+
+// --- مسابقه‌ی فیلم/بازی (OpenTDB) + جدول امتیازات (Adafruit IO از طریق Worker) ---
+const LB_URL = "https://leaderboard-proxy.kdkdke126.workers.dev";
+let quizQuestions = [];
+let quizIndex = 0;
+let quizScore = 0;
+
+function decodeHTML(html) {
+  const txt = document.createElement("textarea");
+  txt.innerHTML = html;
+  return txt.value;
+}
+
+async function startQuiz() {
+  document.getElementById("leaderboardBox").style.display = "none";
+  const box = document.getElementById("quizBox");
+  box.style.display = "block";
+  document.getElementById("quizProgress").innerText = "";
+  document.getElementById("quizQuestion").innerText = "در حال دریافت سوال...";
+  document.getElementById("quizOptions").innerHTML = "";
+
+  const cat = Math.random() < 0.5 ? 11 : 15; // ۱۱=فیلم، ۱۵=بازی ویدیویی
+  try {
+    const resp = await fetch(`https://opentdb.com/api.php?amount=5&category=${cat}&type=multiple`);
+    const data = await resp.json();
+    if (!data.results || !data.results.length) throw new Error("no questions");
+    quizQuestions = data.results;
+    quizIndex = 0;
+    quizScore = 0;
+    showQuizQuestion();
+  } catch (e) {
+    document.getElementById("quizQuestion").innerText = "اتصال به سوال‌ها برقرار نشد، دوباره امتحان کن";
+  }
+}
+
+function showQuizQuestion() {
+  if (quizIndex >= quizQuestions.length) {
+    finishQuiz();
+    return;
+  }
+  const q = quizQuestions[quizIndex];
+  document.getElementById("quizProgress").innerText =
+    `سوال ${quizIndex + 1} از ${quizQuestions.length} — امتیاز: ${quizScore}`;
+  document.getElementById("quizQuestion").innerText = decodeHTML(q.question);
+
+  const correct = decodeHTML(q.correct_answer);
+  const options = [...q.incorrect_answers.map(decodeHTML), correct];
+  options.sort(() => Math.random() - 0.5);
+
+  const optBox = document.getElementById("quizOptions");
+  optBox.innerHTML = "";
+  options.forEach(opt => {
+    const b = document.createElement("button");
+    b.innerText = opt;
+    b.onclick = () => answerQuiz(opt, correct);
+    optBox.appendChild(b);
+  });
+}
+
+function answerQuiz(picked, correct) {
+  if (picked === correct) { quizScore++; btn(25); } else { btn(26); }
+  quizIndex++;
+  setTimeout(showQuizQuestion, 700);
+}
+
+async function finishQuiz() {
+  document.getElementById("quizQuestion").innerText =
+    `تموم شد! امتیازت: ${quizScore} از ${quizQuestions.length}`;
+  document.getElementById("quizOptions").innerHTML = "";
+  document.getElementById("quizProgress").innerText = "";
+
+  const name = prompt("اسمت رو برای جدول امتیازات بنویس:");
+  if (name && name.trim()) {
+    try {
+      await fetch(LB_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feed: "leaderboard", value: name.trim() + "|" + quizScore })
+      });
+    } catch (e) {}
+  }
+}
+
+async function showLeaderboard() {
+  document.getElementById("quizBox").style.display = "none";
+  const box = document.getElementById("leaderboardBox");
+  box.style.display = "block";
+  box.innerHTML = "در حال بارگذاری...";
+  try {
+    const resp = await fetch(`${LB_URL}?feed=leaderboard&limit=50`);
+    const data = await resp.json();
+    const rows = data.map(d => {
+      const parts = (d.value || "").split("|");
+      return { name: parts[0] || "؟", score: parseInt(parts[1]) || 0 };
+    });
+    rows.sort((a, b) => b.score - a.score);
+    const top = rows.slice(0, 10);
+    box.innerHTML = top.length
+      ? top.map((r, i) => `<div class="lbRow">${i + 1}. ${r.name} — ${r.score} امتیاز</div>`).join("")
+      : "هنوز امتیازی ثبت نشده";
+  } catch (e) {
+    box.innerHTML = "خطا در دریافت جدول امتیازات";
+  }
+}
 
 function addMsg(text, who) {
   const box = document.getElementById("chatBox");
