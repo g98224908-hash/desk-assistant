@@ -56,6 +56,13 @@
   #leaderboardBox { display:none; text-align:right; background:#1c2733; border-radius:14px;
                      padding:14px; margin-top:10px; font-size:14px; }
   .lbRow { padding:6px 0; border-bottom:1px solid #2a3542; }
+
+  .miniBox { background:#1c2733; border-radius:14px; padding:12px; margin-top:10px;
+             text-align:right; font-size:14px; line-height:1.6; }
+  .miniForm { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+  .miniForm input { padding:10px; font-size:14px; border-radius:10px; border:none;
+                     background:#0f1115; color:#fff; text-align:right; }
+  .miniForm button { background:#2196F3; }
 </style>
 </head>
 <body>
@@ -123,6 +130,40 @@
   <div id="quizOptions"></div>
 </div>
 <div id="leaderboardBox"></div>
+
+<div class="section-title">زمان و یادآوری</div>
+<div class="miniBox" id="nowruzBox"></div>
+<div class="miniBox" id="fortuneBox"></div>
+
+<div class="miniBox">
+  شمارش معکوس شخصی
+  <div class="miniForm">
+    <input type="text" id="pcLabel" placeholder="اسم مناسبت (مثلاً امتحان ریاضی)">
+    <input type="date" id="pcDate">
+    <button onclick="savePersonalCountdown()">ذخیره</button>
+  </div>
+  <div id="pcResult" style="margin-top:8px;"></div>
+</div>
+
+<div class="miniBox">
+  تایمر / یادآور
+  <div class="miniForm">
+    <input type="number" id="timerMinutes" placeholder="چند دقیقه دیگه؟">
+    <input type="text" id="timerLabel" placeholder="یادآوری چی؟">
+    <button onclick="startTimer()">شروع تایمر</button>
+  </div>
+  <div id="timerStatus" style="margin-top:8px;"></div>
+</div>
+
+<div class="miniBox">
+  پیام به آینده
+  <div class="miniForm">
+    <input type="text" id="fmText" placeholder="پیامت چیه؟">
+    <input type="date" id="fmDate">
+    <button onclick="saveFutureMsg()">ذخیره‌ی پیام</button>
+  </div>
+  <div id="fmStatus" style="margin-top:8px;"></div>
+</div>
 
 <div class="section-title">دستیار هوشمند</div>
 <div id="chatBox"></div>
@@ -313,6 +354,128 @@ async function showLeaderboard() {
     box.innerHTML = "خطا در دریافت جدول امتیازات";
   }
 }
+
+// --- شمارش معکوس تا نوروز (تقریبی، ۲۱ اسفند/۲۱ مارس) ---
+function nowruzCountdown() {
+  const now = new Date();
+  let year = now.getFullYear();
+  let target = new Date(year, 2, 21, 0, 0, 0);
+  if (now >= target) target = new Date(year + 1, 2, 21, 0, 0, 0);
+  const days = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+  document.getElementById("nowruzBox").innerText = `🌱 ${days} روز تا نوروز مونده`;
+}
+
+// --- فال روزانه (یه جمله‌ی ثابت برای هر روز) ---
+const FORTUNES = [
+  "امروز روز خوبیه برای شروع یه کار جدید.",
+  "یه نفس عمیق بکش، همه‌چی درست می‌شه.",
+  "امروز حواست به خودت هم باشه، نه فقط کارها.",
+  "یه قدم کوچیک هم جلو رفتنه.",
+  "امروز به یکی که دوستش داری پیام بده.",
+  "استراحت کردن هم بخشی از پیشرفته.",
+  "امروز یه چیز جدید یاد بگیر، هرچقدر کوچیک.",
+  "به خودت سخت نگیر، داری خوب پیش می‌ری.",
+  "امروز یکی از کارهای عقب‌افتاده رو تموم کن.",
+  "یادت باشه آب بخوری امروز 😄",
+  "امروز یه لبخند به یکی هدیه بده.",
+  "کارهای بزرگ از کارهای کوچیک شروع می‌شن.",
+  "امروز رو با انرژی مثبت شروع کن.",
+  "یه‌کم به آینده‌ت فکر کن، ولی امروز رو زندگی کن.",
+  "امروز حتماً یه استراحت کوتاه بین کارها بذار."
+];
+function dailyFortune() {
+  const todayKey = new Date().toISOString().slice(0, 10);
+  let idx = 0;
+  for (let i = 0; i < todayKey.length; i++) idx += todayKey.charCodeAt(i);
+  idx = idx % FORTUNES.length;
+  document.getElementById("fortuneBox").innerText = "🔮 فال امروز: " + FORTUNES[idx];
+}
+
+// --- شمارش معکوس شخصی ---
+function savePersonalCountdown() {
+  const label = document.getElementById("pcLabel").value.trim();
+  const date = document.getElementById("pcDate").value;
+  if (!label || !date) return;
+  localStorage.setItem("personalCountdown", JSON.stringify({ label, date }));
+  document.getElementById("pcLabel").value = "";
+  document.getElementById("pcDate").value = "";
+  renderPersonalCountdown();
+}
+function renderPersonalCountdown() {
+  const raw = localStorage.getItem("personalCountdown");
+  const box = document.getElementById("pcResult");
+  if (!raw) { box.innerText = ""; return; }
+  const { label, date } = JSON.parse(raw);
+  const target = new Date(date);
+  const now = new Date();
+  const diffDays = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+  let mood;
+  if (diffDays < 0) mood = "گذشت! 😅";
+  else if (diffDays === 0) mood = "همین امروزه! 😱";
+  else if (diffDays <= 3) mood = "وای وای وای، خیلی نزدیکه 😰";
+  else if (diffDays <= 7) mood = "داره نزدیک می‌شه‌ها 😬";
+  else if (diffDays <= 30) mood = "یه‌کم وقت داری، ولی غافل نشو 🙂";
+  else mood = "خیالت راحت باشه، وقت زیاده 😌";
+  box.innerText = `${label}: ${diffDays} روز مونده — ${mood}`;
+}
+
+// --- تایمر / یادآور (تا وقتی این صفحه بازه) ---
+let timerHandle = null;
+function startTimer() {
+  const mins = parseFloat(document.getElementById("timerMinutes").value);
+  const label = document.getElementById("timerLabel").value.trim() || "یادآوری";
+  if (!mins || mins <= 0) return;
+  if (timerHandle) clearTimeout(timerHandle);
+  document.getElementById("timerStatus").innerText =
+    `⏳ تایمر «${label}» برای ${mins} دقیقه‌ی دیگه فعال شد (تا وقتی این صفحه بازه)`;
+  timerHandle = setTimeout(() => {
+    document.getElementById("timerStatus").innerText = `⏰ ${label}`;
+    alert("⏰ " + label);
+  }, mins * 60 * 1000);
+}
+
+// --- پیام به آینده (ذخیره روی فید Adafruit IO به اسم futuremsg) ---
+async function saveFutureMsg() {
+  const text = document.getElementById("fmText").value.trim();
+  const date = document.getElementById("fmDate").value;
+  const status = document.getElementById("fmStatus");
+  if (!text || !date) return;
+  status.innerText = "در حال ذخیره...";
+  try {
+    await fetch(LB_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ feed: "futuremsg", value: date + "|" + text })
+    });
+    document.getElementById("fmText").value = "";
+    document.getElementById("fmDate").value = "";
+    status.innerText = "ذخیره شد ✅ همون تاریخ که سایت رو باز کنی نشونت می‌دم.";
+  } catch (e) {
+    status.innerText = "خطا در ذخیره‌سازی";
+  }
+}
+
+async function checkFutureMsg() {
+  try {
+    const resp = await fetch(`${LB_URL}?feed=futuremsg&limit=1`);
+    const data = await resp.json();
+    if (!data.length) return;
+    const [dateStr, ...rest] = data[0].value.split("|");
+    const text = rest.join("|");
+    const target = new Date(dateStr);
+    const now = new Date();
+    const shownKey = "futuremsgShown_" + dateStr;
+    if (now >= target && !localStorage.getItem(shownKey)) {
+      localStorage.setItem(shownKey, "1");
+      setTimeout(() => alert("💌 پیام از گذشته:\n\n" + text), 500);
+    }
+  } catch (e) {}
+}
+
+nowruzCountdown();
+dailyFortune();
+renderPersonalCountdown();
+checkFutureMsg();
 
 function addMsg(text, who) {
   const box = document.getElementById("chatBox");
