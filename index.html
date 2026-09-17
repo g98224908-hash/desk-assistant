@@ -1,544 +1,666 @@
 <!DOCTYPE html>
-<html dir="rtl" lang="fa">
+<html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>دستیار رومیزی</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>میم‌ساز</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&family=Lalezar&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; }
-  body { font-family: sans-serif; background:#0f1115; color:#fff; text-align:center;
-         padding:20px; margin:0; min-height:100vh; }
-  h2 { font-weight:600; font-size:22px; margin:0 0 4px; }
-  .status { font-size:13px; color:#8b93a3; margin-bottom:24px; }
-  .section-title { font-size:13px; color:#8b93a3; margin:24px 0 12px; text-align:right; }
-  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
-  button { padding:18px 8px; font-size:15px; border:none; border-radius:14px;
-           background:#1c2733; color:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.3); }
-  button:active { background:#2196F3; transform:scale(0.97); }
-  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
-           background:#2196F3; color:#fff; padding:10px 20px; border-radius:20px;
-           font-size:13px; opacity:0; transition:opacity 0.3s; pointer-events:none; }
-  .toast.show { opacity:1; }
-  #lockScreen { position:fixed; inset:0; background:#0f1115; display:flex;
-                flex-direction:column; align-items:center; justify-content:center;
-                gap:14px; z-index:100; padding:20px; }
-  #lockScreen input { padding:14px; font-size:16px; border-radius:12px; border:none;
-                       width:220px; text-align:center; }
-  #lockScreen button { padding:14px 20px; font-size:15px; border:none; border-radius:12px;
-                        background:#2196F3; color:#fff; width:220px; }
-  #lockError { color:#ff6b6b; font-size:13px; min-height:18px; }
-  #appContent { display:none; }
+  :root{
+    --bg-1:#0B4F52;
+    --bg-2:#0E6367;
+    --coral:#FF6B4A;
+    --yellow:#FFD23F;
+    --ink:#1B1330;
+    --paper:#FFF9EE;
+    --paper-edge:#E9DEC6;
+    --card:#0E3E40;
+    --card-line:rgba(255,255,255,0.09);
+    --muted:#BFEAE7;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Vazirmatn',Tahoma,sans-serif;
+    background:
+      radial-gradient(circle at 12px 12px, rgba(255,255,255,0.05) 2px, transparent 2.5px) 0 0/28px 28px,
+      linear-gradient(160deg,var(--bg-1),var(--bg-2) 55%,#0A3335 100%);
+    color:var(--muted);
+    min-height:100vh;
+    padding:20px 14px 60px;
+  }
+  .wrap{max-width:1180px;margin:0 auto;}
 
-  #chatBox { text-align:right; background:#1c2733; border-radius:14px; padding:12px;
-             min-height:120px; max-height:260px; overflow-y:auto; margin-bottom:10px; }
-  .msg { padding:8px 12px; border-radius:10px; margin:6px 0; font-size:14px; line-height:1.5; }
-  .msg.user { background:#2196F3; margin-left:30px; }
-  .msg.ai { background:#2a3542; margin-right:30px; }
-  .chatRow { display:flex; gap:8px; }
-  #chatInput { flex:1; padding:14px; font-size:15px; border-radius:12px; border:none;
-               background:#1c2733; color:#fff; }
-  #micBtn, #sendBtn { padding:14px 16px; border-radius:12px; border:none; background:#2196F3; color:#fff; }
-  #micBtn.listening { background:#ff6b6b; }
+  header{
+    display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+    gap:10px;margin-bottom:22px;
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand .logo{
+    width:46px;height:46px;border-radius:12px;
+    background:linear-gradient(135deg,var(--coral),var(--yellow));
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Lalezar',Tahoma,sans-serif;font-size:24px;color:var(--ink);
+    box-shadow:0 6px 16px rgba(0,0,0,0.35);
+    transform:rotate(-6deg);
+  }
+  .brand h1{font-size:22px;margin:0;color:#fff;letter-spacing:.2px;}
+  .brand p{margin:2px 0 0;font-size:12.5px;color:var(--muted);opacity:.85;}
+  .credit{
+    font-size:12.5px;background:rgba(255,255,255,0.07);
+    border:1px solid var(--card-line);padding:7px 14px;border-radius:999px;
+    color:#fff;white-space:nowrap;
+  }
+  .credit b{color:var(--yellow);font-weight:700;}
 
-  #speakToggleRow { display:flex; align-items:center; gap:8px; justify-content:flex-end;
-                     font-size:13px; color:#8b93a3; margin-bottom:10px; }
-  #speakToggleRow input { width:18px; height:18px; }
+  .layout{display:grid;grid-template-columns:1.05fr 1fr;gap:22px;align-items:start;}
+  @media (max-width:880px){.layout{grid-template-columns:1fr;}}
 
-  #volumeBox { background:#1c2733; border-radius:14px; padding:14px; text-align:right; }
-  #volumeBox input[type=range] { width:100%; margin:10px 0; }
-  #volumeValue { font-size:20px; font-weight:600; }
+  /* preview */
+  .stage{
+    position:relative;padding:26px 22px 34px;
+    display:flex;flex-direction:column;align-items:center;
+  }
+  .stage-bg{
+    position:absolute;inset:0;
+    background-image:radial-gradient(circle,rgba(255,255,255,0.06) 1.6px,transparent 1.6px);
+    background-size:16px 16px;border-radius:26px;
+  }
+  .polaroid{
+    position:relative;background:var(--paper);
+    padding:14px 14px 42px;border-radius:6px;
+    box-shadow:0 18px 40px rgba(0,0,0,0.45), 0 2px 0 var(--paper-edge);
+    transform:rotate(-1.2deg);
+    max-width:100%;
+  }
+  .tape{
+    position:absolute;top:-16px;left:50%;transform:translateX(-50%) rotate(-3deg);
+    width:110px;height:30px;background:rgba(255,210,63,0.55);
+    border:1px solid rgba(255,255,255,0.4);
+    box-shadow:0 4px 10px rgba(0,0,0,0.25);
+  }
+  .canvas-holder{
+    position:relative;line-height:0;background:#111 repeating-conic-gradient(#1c1c1c 0% 25%, #262626 0% 50%) 0 0/22px 22px;
+    max-width:100%;border-radius:2px;overflow:hidden;
+    touch-action:none;
+  }
+  #memeCanvas{display:block;max-width:100%;height:auto;}
+  .caption-el{
+    position:absolute;transform:translate(50%,-50%);
+    font-family:'Lalezar',Tahoma,sans-serif;
+    color:#fff;
+    -webkit-text-stroke:2px #000;
+    text-align:center;white-space:pre-wrap;
+    cursor:grab;user-select:none;-webkit-user-select:none;
+    padding:2px 6px;line-height:1.15;
+    max-width:92%;
+    text-shadow:0 0 3px rgba(0,0,0,.25);
+  }
+  .caption-el:active{cursor:grabbing;}
+  .caption-el.dragging{outline:2px dashed rgba(255,255,255,0.55);outline-offset:4px;}
+  .empty-hint{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:#8a8a8a;font-size:13px;text-align:center;padding:20px;pointer-events:none;
+  }
+  .polaroid-caption{
+    text-align:center;color:var(--ink);opacity:.55;font-size:11.5px;margin-top:10px;
+  }
 
-  #secretBox { display:none; margin:16px 0; gap:8px; }
-  #secretBox input { flex:1; padding:12px; font-size:14px; border-radius:10px; border:none;
-                      background:#1c2733; color:#fff; text-align:center; }
-  #secretBox button { padding:12px 16px; background:#2196F3; }
-  .partyOn button.active { background:#ff9800; }
+  .stage-actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;justify-content:center;}
 
-  #quizBox { display:none; text-align:right; background:#1c2733; border-radius:14px;
-             padding:14px; margin-top:10px; }
-  #quizProgress { font-size:12px; color:#8b93a3; margin-bottom:8px; }
-  #quizQuestion { font-size:15px; margin-bottom:10px; line-height:1.6; }
-  #quizOptions { display:flex; flex-direction:column; gap:8px; }
-  #quizOptions button { text-align:right; width:100%; }
-  #leaderboardBox { display:none; text-align:right; background:#1c2733; border-radius:14px;
-                     padding:14px; margin-top:10px; font-size:14px; }
-  .lbRow { padding:6px 0; border-bottom:1px solid #2a3542; }
+  /* buttons */
+  .btn{
+    font-family:inherit;border:none;cursor:pointer;border-radius:12px;
+    padding:11px 18px;font-size:13.5px;font-weight:600;
+    display:inline-flex;align-items:center;gap:8px;transition:transform .12s ease, filter .12s ease;
+  }
+  .btn:hover{filter:brightness(1.08);}
+  .btn:active{transform:scale(.97);}
+  .btn-primary{background:linear-gradient(135deg,var(--coral),#FF8A5B);color:#211;box-shadow:0 6px 16px rgba(255,107,74,0.35);}
+  .btn-ghost{background:rgba(255,255,255,0.08);color:#fff;border:1px solid var(--card-line);}
+  .btn-ai{background:linear-gradient(135deg,#7C5CFF,#4FD1C5);color:#0b0b0b;}
+  .btn-sm{padding:7px 12px;font-size:12px;border-radius:9px;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;filter:none;}
 
-  .miniBox { background:#1c2733; border-radius:14px; padding:12px; margin-top:10px;
-             text-align:right; font-size:14px; line-height:1.6; }
-  .miniForm { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
-  .miniForm input { padding:10px; font-size:14px; border-radius:10px; border:none;
-                     background:#0f1115; color:#fff; text-align:right; }
-  .miniForm button { background:#2196F3; }
+  /* control cards */
+  .panel{display:flex;flex-direction:column;gap:14px;}
+  .card{
+    background:var(--card);border:1px solid var(--card-line);
+    border-radius:16px;padding:16px 16px 18px;
+  }
+  .card h3{margin:0 0 12px;font-size:14px;color:#fff;display:flex;align-items:center;gap:8px;}
+  .card h3 .dot{width:8px;height:8px;border-radius:50%;background:var(--coral);}
+
+  .drop{
+    border:1.5px dashed rgba(255,255,255,0.28);border-radius:12px;
+    padding:16px;text-align:center;font-size:12.5px;color:var(--muted);
+    cursor:pointer;transition:background .15s;
+  }
+  .drop:hover{background:rgba(255,255,255,0.04);}
+  .drop input{display:none;}
+
+  .swatches{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .swatch{
+    width:44px;height:44px;border-radius:10px;cursor:pointer;
+    border:2px solid transparent;
+  }
+  .swatch:hover{border-color:#fff;}
+
+  label.field{display:block;font-size:12.5px;margin:12px 0 6px;color:var(--muted);}
+  textarea, input[type=text]{
+    width:100%;background:rgba(0,0,0,0.22);border:1px solid var(--card-line);
+    border-radius:10px;color:#fff;padding:9px 10px;font-family:inherit;font-size:13px;
+    resize:none;
+  }
+  input[type=range]{width:100%;accent-color:var(--coral);}
+  .range-row{display:flex;align-items:center;gap:10px;}
+  .range-row span{font-size:11.5px;min-width:34px;text-align:left;color:var(--muted);}
+
+  .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .chip{
+    background:rgba(255,255,255,0.07);border:1px solid var(--card-line);
+    color:#fff;font-size:11.5px;padding:6px 10px;border-radius:999px;cursor:pointer;
+  }
+  .chip:hover{background:rgba(255,255,255,0.14);}
+
+  .preset-row{display:flex;flex-wrap:wrap;gap:8px;}
+
+  .color-row{display:flex;gap:14px;align-items:center;margin-top:10px;}
+  .color-row label{font-size:12px;display:flex;align-items:center;gap:6px;}
+  input[type=color]{width:34px;height:28px;border:none;border-radius:6px;background:none;cursor:pointer;}
+
+  .ai-status{font-size:12px;margin-top:8px;color:var(--yellow);min-height:16px;}
+  .footer-note{text-align:center;font-size:11.5px;color:var(--muted);opacity:.6;margin-top:26px;}
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<div id="lockScreen">
-  <h2>دستیار رومیزی</h2>
-  <input type="password" id="passInput" placeholder="رمز عبور" autofocus>
-  <button onclick="checkPass()">ورود</button>
-  <div id="lockError"></div>
-</div>
+  <header>
+    <div class="brand">
+      <div class="logo">M</div>
+      <div>
+        <h1>میم‌ساز</h1>
+        <p>عکس بگیر، متن بذار، بخندون</p>
+      </div>
+    </div>
+    <div class="credit">ساخته شده توسط <b>محمدرضا کوپاهی</b></div>
+  </header>
 
-<div id="appContent">
-<h2 id="titleTap" onclick="titleTap()">دستیار رومیزی</h2>
-<div class="status">کنترل از هرجا</div>
+  <div class="layout">
 
-<div id="secretBox" class="chatRow">
-  <input type="text" id="secretInput" placeholder="رمز مخفی رو وارد کن">
-  <button onclick="checkSecret()">تایید</button>
-</div>
+    <!-- preview -->
+    <div class="stage">
+      <div class="stage-bg"></div>
+      <div class="polaroid" style="position:relative;">
+        <div class="tape"></div>
+        <div class="canvas-holder" id="canvasHolder">
+          <canvas id="memeCanvas" width="800" height="800"></canvas>
+          <div class="empty-hint" id="emptyHint">یک عکس آپلود کن یا یکی از قالب‌های نمونه رو انتخاب کن</div>
+        </div>
+        <div class="polaroid-caption">میم من ✂︎</div>
+      </div>
 
-<div class="grid">
-<button onclick="btn(1)">دما</button>
-<button onclick="btn(2)">ساعت</button>
-<button onclick="btn(3)">آب‌وهوا</button>
-<button onclick="btn(4)">تاریخ شمسی</button>
-<button onclick="btn(5)">تعطیلی امروز</button>
-<button onclick="btn(6)">تعطیلی فردا</button>
-<button onclick="btn(7)">جمله ۱</button>
-<button onclick="btn(8)">جمله ۲</button>
-</div>
+      <div class="stage-actions">
+        <button class="btn btn-ghost" id="resetBtn">↺ بازنشانی تنظیمات</button>
+        <button class="btn btn-primary" id="downloadBtn">⬇ دانلود تصویر</button>
+      </div>
+    </div>
 
-<div class="section-title">موزیک</div>
-<div class="grid">
-<button onclick="btn(9)">پخش / توقف</button>
-<button onclick="btn(10)">توقف کامل</button>
-<button onclick="btn(11)">آهنگ بعدی</button>
-<button onclick="btn(12)">آهنگ قبلی</button>
-</div>
+    <!-- controls -->
+    <div class="panel">
 
-<div class="section-title">صدا</div>
-<div id="volumeBox">
-  <div>سطح صدا: <span id="volumeValue">50</span></div>
-  <input type="range" id="volumeSlider" min="1" max="100" value="50"
-         oninput="document.getElementById('volumeValue').innerText = this.value"
-         onchange="setVolume(this.value)">
-</div>
+      <div class="card">
+        <h3><span class="dot"></span> تصویر</h3>
+        <div class="drop" id="dropZone">
+          آپلود عکس از دستگاه‌ات (کلیک کن یا بکش و رها کن)
+          <input type="file" id="fileInput" accept="image/*">
+        </div>
+        <div style="font-size:11.5px;margin-top:10px;opacity:.75;">یا یکی از قالب‌های نمونه رنگی رو انتخاب کن:</div>
+        <div class="swatches" id="swatchRow"></div>
+      </div>
 
-<div class="section-title">قابلیت‌های ویژه</div>
-<div class="grid">
-<button onclick="btn(16)">آمار من</button>
-<button onclick="btn(17)">فال حافظ</button>
-</div>
-<div class="grid" id="partyGrid">
-<button id="partyOnBtn" onclick="setParty(true)">حالت مهمونی روشن</button>
-<button id="partyOffBtn" onclick="setParty(false)">حالت مهمونی خاموش</button>
-</div>
+      <div class="card">
+        <h3><span class="dot"></span> متن بالا و پایین</h3>
+        <label class="field">متن بالا</label>
+        <textarea id="topText" rows="2" placeholder="متن بالای میم..."></textarea>
+        <label class="field">متن پایین</label>
+        <textarea id="bottomText" rows="2" placeholder="متن پایین میم..."></textarea>
 
-<div class="section-title">مسابقه و امتیازات</div>
-<div class="grid">
-<button onclick="startQuiz()">🎮 شروع مسابقه</button>
-<button onclick="showLeaderboard()">🏆 جدول امتیازات</button>
-</div>
-<div id="quizBox">
-  <div id="quizProgress"></div>
-  <div id="quizQuestion"></div>
-  <div id="quizOptions"></div>
-</div>
-<div id="leaderboardBox"></div>
+        <div style="font-size:11.5px;margin-top:10px;opacity:.75;">نمونه متن‌های آماده (بدون نیاز به اینترنت):</div>
+        <div class="chip-row" id="sampleChips"></div>
 
-<div class="section-title">زمان و یادآوری</div>
-<div class="miniBox" id="nowruzBox"></div>
-<div class="miniBox" id="fortuneBox"></div>
+        <button class="btn btn-ai btn-sm" id="aiBtn" style="margin-top:12px;width:100%;justify-content:center;">
+          🤖 پیشنهاد متن با هوش مصنوعی (از روی عکس)
+        </button>
+        <div class="ai-status" id="aiStatus"></div>
+        <div class="chip-row" id="aiChips"></div>
+      </div>
 
-<div class="miniBox">
-  شمارش معکوس شخصی
-  <div class="miniForm">
-    <input type="text" id="pcLabel" placeholder="اسم مناسبت (مثلاً امتحان ریاضی)">
-    <input type="date" id="pcDate">
-    <button onclick="savePersonalCountdown()">ذخیره</button>
+      <div class="card">
+        <h3><span class="dot"></span> چیدمان کلاسیک</h3>
+        <div class="preset-row">
+          <button class="btn btn-ghost btn-sm" data-preset="both">بالا + پایین</button>
+          <button class="btn btn-ghost btn-sm" data-preset="topOnly">فقط بالا</button>
+          <button class="btn btn-ghost btn-sm" data-preset="bottomOnly">فقط پایین</button>
+          <button class="btn btn-ghost btn-sm" data-preset="center">وسط</button>
+        </div>
+        <div style="font-size:11px;margin-top:10px;opacity:.65;">متن‌ها قابل کشیدن‌اند؛ روی هرکدام بکش تا جابه‌جا بشه.</div>
+      </div>
+
+      <div class="card">
+        <h3><span class="dot"></span> ظاهر متن</h3>
+        <label class="field">اندازه فونت</label>
+        <div class="range-row"><input type="range" id="fontSize" min="3" max="20" step="0.5"><span id="fontSizeVal"></span></div>
+
+        <label class="field">ضخامت حاشیه متن (دور نوشته)</label>
+        <div class="range-row"><input type="range" id="strokeWidth" min="0" max="30" step="1"><span id="strokeWidthVal"></span></div>
+
+        <label class="field">فاصله از لبه (حاشیه بالا/پایین)</label>
+        <div class="range-row"><input type="range" id="marginSize" min="2" max="30" step="1"><span id="marginVal"></span></div>
+
+        <div class="color-row">
+          <label>رنگ متن <input type="color" id="fillColor" value="#ffffff"></label>
+          <label>رنگ حاشیه <input type="color" id="strokeColor" value="#000000"></label>
+        </div>
+      </div>
+
+    </div>
   </div>
-  <div id="pcResult" style="margin-top:8px;"></div>
-</div>
 
-<div class="miniBox">
-  تایمر / یادآور
-  <div class="miniForm">
-    <input type="number" id="timerMinutes" placeholder="چند دقیقه دیگه؟">
-    <input type="text" id="timerLabel" placeholder="یادآوری چی؟">
-    <button onclick="startTimer()">شروع تایمر</button>
-  </div>
-  <div id="timerStatus" style="margin-top:8px;"></div>
-</div>
-
-<div class="miniBox">
-  پیام به آینده
-  <div class="miniForm">
-    <input type="text" id="fmText" placeholder="پیامت چیه؟">
-    <input type="date" id="fmDate">
-    <button onclick="saveFutureMsg()">ذخیره‌ی پیام</button>
-  </div>
-  <div id="fmStatus" style="margin-top:8px;"></div>
-</div>
-
-<div class="section-title">دستیار هوشمند</div>
-<div id="speakToggleRow">
-  <label for="speakToggle">جواب از بلندگوی دستگاه هم پخش بشه</label>
-  <input type="checkbox" id="speakToggle" onchange="saveSpeakToggle()">
-</div>
-<div id="chatBox"></div>
-<div class="chatRow">
-  <button id="micBtn" onclick="toggleMic()">🎤</button>
-  <input type="text" id="chatInput" placeholder="پیامت رو بنویس یا میکروفون بزن...">
-  <button id="sendBtn" onclick="sendChat()">ارسال</button>
-</div>
-
-<div id="toast" class="toast">ارسال شد</div>
+  <div class="footer-note">همه چیز داخل مرورگرت پردازش می‌شه — عکس‌ها جایی آپلود نمی‌شن، جز وقتی خودت «پیشنهاد هوش مصنوعی» رو بزنی.</div>
 </div>
 
 <script>
-const PROXY_URL = "https://desk-assistant-proxy.kdkdke126.workers.dev";
-const AI_URL = "https://desk-assistant-ai.kdkdke126.workers.dev";
-const SITE_PASSWORD = "Mm17881788@";
+(function(){
+  const canvas = document.getElementById('memeCanvas');
+  const ctx = canvas.getContext('2d');
+  const holder = document.getElementById('canvasHolder');
+  const emptyHint = document.getElementById('emptyHint');
 
-function checkPass() {
-  const val = document.getElementById("passInput").value;
-  if (val === SITE_PASSWORD) {
-    localStorage.setItem("deskAssistantUnlocked", "1");
-    document.getElementById("lockScreen").style.display = "none";
-    document.getElementById("appContent").style.display = "block";
-  } else {
-    document.getElementById("lockError").innerText = "رمز اشتباهه";
+  const DEFAULTS = {
+    fontSizePct: 9,
+    strokePct: 12,   // percent of font size
+    marginPct: 8,
+    fillColor: '#ffffff',
+    strokeColor: '#000000'
+  };
+
+  let state = {
+    imgEl: null,
+    imgReady: false,
+    top: { text: '', xPct: 50, yPct: null },
+    bottom: { text: '', xPct: 50, yPct: null },
+    fontSizePct: DEFAULTS.fontSizePct,
+    strokePct: DEFAULTS.strokePct,
+    marginPct: DEFAULTS.marginPct,
+    fillColor: DEFAULTS.fillColor,
+    strokeColor: DEFAULTS.strokeColor
+  };
+
+  const els = {
+    topText: document.getElementById('topText'),
+    bottomText: document.getElementById('bottomText'),
+    fontSize: document.getElementById('fontSize'),
+    fontSizeVal: document.getElementById('fontSizeVal'),
+    strokeWidth: document.getElementById('strokeWidth'),
+    strokeWidthVal: document.getElementById('strokeWidthVal'),
+    marginSize: document.getElementById('marginSize'),
+    marginVal: document.getElementById('marginVal'),
+    fillColor: document.getElementById('fillColor'),
+    strokeColor: document.getElementById('strokeColor'),
+    fileInput: document.getElementById('fileInput'),
+    dropZone: document.getElementById('dropZone'),
+    swatchRow: document.getElementById('swatchRow'),
+    sampleChips: document.getElementById('sampleChips'),
+    aiBtn: document.getElementById('aiBtn'),
+    aiStatus: document.getElementById('aiStatus'),
+    aiChips: document.getElementById('aiChips'),
+    resetBtn: document.getElementById('resetBtn'),
+    downloadBtn: document.getElementById('downloadBtn'),
+  };
+
+  // ---------- overlay caption elements ----------
+  const capTop = document.createElement('div');
+  capTop.className = 'caption-el';
+  const capBottom = document.createElement('div');
+  capBottom.className = 'caption-el';
+  holder.appendChild(capTop);
+  holder.appendChild(capBottom);
+
+  function syncFieldsFromState(){
+    els.fontSize.value = state.fontSizePct;
+    els.fontSizeVal.textContent = state.fontSizePct + '%';
+    els.strokeWidth.value = state.strokePct;
+    els.strokeWidthVal.textContent = state.strokePct + '%';
+    els.marginSize.value = state.marginPct;
+    els.marginVal.textContent = state.marginPct + '%';
+    els.fillColor.value = state.fillColor;
+    els.strokeColor.value = state.strokeColor;
   }
-}
 
-document.getElementById("passInput").addEventListener("keydown", function(e) {
-  if (e.key === "Enter") checkPass();
-});
-
-if (localStorage.getItem("deskAssistantUnlocked") === "1") {
-  document.getElementById("lockScreen").style.display = "none";
-  document.getElementById("appContent").style.display = "block";
-}
-
-function btn(id) {
-  fetch(PROXY_URL + "/?id=" + id)
-    .then(r => r.text()).then(t => { document.getElementById("toast").innerText = t; showToast(); });
-}
-
-function showToast() {
-  const t = document.getElementById("toast");
-  t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 1200);
-}
-
-// --- تنظیم صدا با عدد ۱ تا ۱۰۰ (شماره‌ی فرستاده‌شده = ۱۰۰ + سطح صدا) ---
-function setVolume(level) {
-  const lvl = Math.max(1, Math.min(100, parseInt(level)));
-  btn(100 + lvl);
-}
-
-// --- حالت مهمونی ---
-function setParty(on) {
-  btn(on ? 23 : 24);
-  document.getElementById("partyOnBtn").classList.toggle("active", on);
-  document.getElementById("partyOffBtn").classList.toggle("active", !on);
-}
-
-// --- رمز مخفی (روی عنوان بالای صفحه ۵ بار ضربه بزن تا ظاهر بشه) ---
-const SECRET_CODES = {
-  "konami": 30,
-  "mohandes": 31
-};
-let tapCount = 0;
-let tapTimer = null;
-
-function titleTap() {
-  tapCount++;
-  clearTimeout(tapTimer);
-  tapTimer = setTimeout(() => { tapCount = 0; }, 1500);
-  if (tapCount >= 5) {
-    tapCount = 0;
-    const box = document.getElementById("secretBox");
-    box.style.display = "flex";
-    document.getElementById("secretInput").focus();
-  }
-}
-
-function checkSecret() {
-  const val = document.getElementById("secretInput").value.trim().toLowerCase();
-  const id = SECRET_CODES[val] || 32;
-  btn(id);
-  document.getElementById("secretInput").value = "";
-  document.getElementById("secretBox").style.display = "none";
-}
-
-document.getElementById("secretInput").addEventListener("keydown", function(e) {
-  if (e.key === "Enter") checkSecret();
-});
-
-// --- مسابقه‌ی فیلم/بازی (OpenTDB) + جدول امتیازات (Adafruit IO از طریق Worker) ---
-const LB_URL = "https://leaderboard-proxy.kdkdke126.workers.dev";
-let quizQuestions = [];
-let quizIndex = 0;
-let quizScore = 0;
-
-function decodeHTML(html) {
-  const txt = document.createElement("textarea");
-  txt.innerHTML = html;
-  return txt.value;
-}
-
-async function startQuiz() {
-  document.getElementById("leaderboardBox").style.display = "none";
-  const box = document.getElementById("quizBox");
-  box.style.display = "block";
-  document.getElementById("quizProgress").innerText = "";
-  document.getElementById("quizQuestion").innerText = "در حال دریافت سوال...";
-  document.getElementById("quizOptions").innerHTML = "";
-
-  const cat = Math.random() < 0.5 ? 11 : 15;
-  try {
-    const resp = await fetch(`https://opentdb.com/api.php?amount=5&category=${cat}&type=multiple`);
-    const data = await resp.json();
-    if (!data.results || !data.results.length) throw new Error("no questions");
-    quizQuestions = data.results;
-    quizIndex = 0;
-    quizScore = 0;
-    showQuizQuestion();
-  } catch (e) {
-    document.getElementById("quizQuestion").innerText = "اتصال به سوال‌ها برقرار نشد، دوباره امتحان کن";
-  }
-}
-
-function showQuizQuestion() {
-  if (quizIndex >= quizQuestions.length) {
-    finishQuiz();
-    return;
-  }
-  const q = quizQuestions[quizIndex];
-  document.getElementById("quizProgress").innerText =
-    `سوال ${quizIndex + 1} از ${quizQuestions.length} — امتیاز: ${quizScore}`;
-  document.getElementById("quizQuestion").innerText = decodeHTML(q.question);
-
-  const correct = decodeHTML(q.correct_answer);
-  const options = [...q.incorrect_answers.map(decodeHTML), correct];
-  options.sort(() => Math.random() - 0.5);
-
-  const optBox = document.getElementById("quizOptions");
-  optBox.innerHTML = "";
-  options.forEach(opt => {
-    const b = document.createElement("button");
-    b.innerText = opt;
-    b.onclick = () => answerQuiz(opt, correct);
-    optBox.appendChild(b);
-  });
-}
-
-function answerQuiz(picked, correct) {
-  if (picked === correct) { quizScore++; btn(25); } else { btn(26); }
-  quizIndex++;
-  setTimeout(showQuizQuestion, 700);
-}
-
-async function finishQuiz() {
-  document.getElementById("quizQuestion").innerText =
-    `تموم شد! امتیازت: ${quizScore} از ${quizQuestions.length}`;
-  document.getElementById("quizOptions").innerHTML = "";
-  document.getElementById("quizProgress").innerText = "";
-
-  const name = prompt("اسمت رو برای جدول امتیازات بنویس:");
-  if (name && name.trim()) {
-    try {
-      await fetch(LB_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feed: "leaderboard", value: name.trim() + "|" + quizScore })
-      });
-    } catch (e) {}
-  }
-}
-
-async function showLeaderboard() {
-  document.getElementById("quizBox").style.display = "none";
-  const box = document.getElementById("leaderboardBox");
-  box.style.display = "block";
-  box.innerHTML = "در حال بارگذاری...";
-  try {
-    const resp = await fetch(`${LB_URL}?feed=leaderboard&limit=50`);
-    const data = await resp.json();
-    const rows = data.map(d => {
-      const parts = (d.value || "").split("|");
-      return { name: parts[0] || "؟", score: parseInt(parts[1]) || 0 };
-    });
-    rows.sort((a, b) => b.score - a.score);
-    const top = rows.slice(0, 10);
-    box.innerHTML = top.length
-      ? top.map((r, i) => `<div class="lbRow">${i + 1}. ${r.name} — ${r.score} امتیاز</div>`).join("")
-      : "هنوز امتیازی ثبت نشده";
-  } catch (e) {
-    box.innerHTML = "خطا در دریافت جدول امتیازات";
-  }
-}
-
-function nowruzCountdown() {
-  const now = new Date();
-  let year = now.getFullYear();
-  let target = new Date(year, 2, 21, 0, 0, 0);
-  if (now >= target) target = new Date(year + 1, 2, 21, 0, 0, 0);
-  const days = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
-  document.getElementById("nowruzBox").innerText = `🌱 ${days} روز تا نوروز مونده`;
-}
-
-const FORTUNES = [
-  "امروز روز خوبیه برای شروع یه کار جدید.",
-  "یه نفس عمیق بکش، همه‌چی درست می‌شه.",
-  "امروز حواست به خودت هم باشه، نه فقط کارها.",
-  "یه قدم کوچیک هم جلو رفتنه.",
-  "امروز به یکی که دوستش داری پیام بده.",
-  "استراحت کردن هم بخشی از پیشرفته.",
-  "امروز یه چیز جدید یاد بگیر، هرچقدر کوچیک.",
-  "به خودت سخت نگیر، داری خوب پیش می‌ری.",
-  "امروز یکی از کارهای عقب‌افتاده رو تموم کن.",
-  "یادت باشه آب بخوری امروز 😄",
-  "امروز یه لبخند به یکی هدیه بده.",
-  "کارهای بزرگ از کارهای کوچیک شروع می‌شن.",
-  "امروز رو با انرژی مثبت شروع کن.",
-  "یه‌کم به آینده‌ت فکر کن، ولی امروز رو زندگی کن.",
-  "امروز حتماً یه استراحت کوتاه بین کارها بذار."
-];
-function dailyFortune() {
-  const todayKey = new Date().toISOString().slice(0, 10);
-  let idx = 0;
-  for (let i = 0; i < todayKey.length; i++) idx += todayKey.charCodeAt(i);
-  idx = idx % FORTUNES.length;
-  document.getElementById("fortuneBox").innerText = "🔮 فال امروز: " + FORTUNES[idx];
-}
-
-function savePersonalCountdown() {
-  const label = document.getElementById("pcLabel").value.trim();
-  const date = document.getElementById("pcDate").value;
-  if (!label || !date) return;
-  localStorage.setItem("personalCountdown", JSON.stringify({ label, date }));
-  document.getElementById("pcLabel").value = "";
-  document.getElementById("pcDate").value = "";
-  renderPersonalCountdown();
-}
-function renderPersonalCountdown() {
-  const raw = localStorage.getItem("personalCountdown");
-  const box = document.getElementById("pcResult");
-  if (!raw) { box.innerText = ""; return; }
-  const { label, date } = JSON.parse(raw);
-  const target = new Date(date);
-  const now = new Date();
-  const diffDays = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
-  let mood;
-  if (diffDays < 0) mood = "گذشت! 😅";
-  else if (diffDays === 0) mood = "همین امروزه! 😱";
-  else if (diffDays <= 3) mood = "وای وای وای، خیلی نزدیکه 😰";
-  else if (diffDays <= 7) mood = "داره نزدیک می‌شه‌ها 😬";
-  else if (diffDays <= 30) mood = "یه‌کم وقت داری، ولی غافل نشو 🙂";
-  else mood = "خیالت راحت باشه، وقت زیاده 😌";
-  box.innerText = `${label}: ${diffDays} روز مونده — ${mood}`;
-}
-
-let timerHandle = null;
-function startTimer() {
-  const mins = parseFloat(document.getElementById("timerMinutes").value);
-  const label = document.getElementById("timerLabel").value.trim() || "یادآوری";
-  if (!mins || mins <= 0) return;
-  if (timerHandle) clearTimeout(timerHandle);
-  document.getElementById("timerStatus").innerText =
-    `⏳ تایمر «${label}» برای ${mins} دقیقه‌ی دیگه فعال شد (تا وقتی این صفحه بازه)`;
-  timerHandle = setTimeout(() => {
-    document.getElementById("timerStatus").innerText = `⏰ ${label}`;
-    alert("⏰ " + label);
-  }, mins * 60 * 1000);
-}
-
-async function saveFutureMsg() {
-  const text = document.getElementById("fmText").value.trim();
-  const date = document.getElementById("fmDate").value;
-  const status = document.getElementById("fmStatus");
-  if (!text || !date) return;
-  status.innerText = "در حال ذخیره...";
-  try {
-    await fetch(LB_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ feed: "futuremsg", value: date + "|" + text })
-    });
-    document.getElementById("fmText").value = "";
-    document.getElementById("fmDate").value = "";
-    status.innerText = "ذخیره شد ✅ همون تاریخ که سایت رو باز کنی نشونت می‌دم.";
-  } catch (e) {
-    status.innerText = "خطا در ذخیره‌سازی";
-  }
-}
-
-async function checkFutureMsg() {
-  try {
-    const resp = await fetch(`${LB_URL}?feed=futuremsg&limit=1`);
-    const data = await resp.json();
-    if (!data.length) return;
-    const [dateStr, ...rest] = data[0].value.split("|");
-    const text = rest.join("|");
-    const target = new Date(dateStr);
-    const now = new Date();
-    const shownKey = "futuremsgShown_" + dateStr;
-    if (now >= target && !localStorage.getItem(shownKey)) {
-      localStorage.setItem(shownKey, "1");
-      setTimeout(() => alert("💌 پیام از گذشته:\n\n" + text), 500);
+  function wrapLines(text, maxWidth, fontPx){
+    const words = String(text || '').split(/\s+/).filter(Boolean);
+    if (!words.length) return [];
+    ctx.font = `900 ${fontPx}px Lalezar, Tahoma, sans-serif`;
+    const lines = [];
+    let cur = '';
+    for (const w of words){
+      const test = cur ? cur + ' ' + w : w;
+      if (ctx.measureText(test).width > maxWidth && cur){
+        lines.push(cur);
+        cur = w;
+      } else {
+        cur = test;
+      }
     }
-  } catch (e) {}
-}
+    if (cur) lines.push(cur);
+    return lines;
+  }
 
-nowruzCountdown();
-dailyFortune();
-renderPersonalCountdown();
-checkFutureMsg();
+  function drawCaption(entry, anchorMode){
+    const text = entry.text;
+    if (!text) return;
+    const W = canvas.width, H = canvas.height;
+    const fontPx = Math.max(10, (state.fontSizePct/100) * W);
+    const maxW = W * 0.92;
+    const lines = wrapLines(text, maxW, fontPx);
+    if (!lines.length) return;
+    const lineH = fontPx * 1.15;
+    const totalH = lines.length * lineH;
 
-// --- سوییچ پخش صدای هوش مصنوعی از بلندگوی دستگاه ---
-function saveSpeakToggle() {
-  const on = document.getElementById("speakToggle").checked;
-  localStorage.setItem("aiSpeakEnabled", on ? "1" : "0");
-}
-if (localStorage.getItem("aiSpeakEnabled") === "1") {
-  document.getElementById("speakToggle").checked = true;
-}
+    const cx = (entry.xPct/100) * W;
+    let cy;
+    if (entry.yPct === null){
+      cy = anchorMode === 'top' ? (state.marginPct/100)*H + totalH/2 : H - (state.marginPct/100)*H - totalH/2;
+    } else {
+      cy = (entry.yPct/100) * H;
+    }
 
-function addMsg(text, who) {
-  const box = document.getElementById("chatBox");
-  const div = document.createElement("div");
-  div.className = "msg " + who;
-  div.innerText = text;
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
-}
+    ctx.font = `900 ${fontPx}px Lalezar, Tahoma, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.direction = 'rtl';
+    ctx.lineJoin = 'round';
+    ctx.miterLimit = 2;
+    const strokeW = Math.max(0, (state.strokePct/100) * fontPx);
 
-function sendChat() {
-  const input = document.getElementById("chatInput");
-  const text = input.value.trim();
-  if (!text) return;
-  addMsg(text, "user");
-  input.value = "";
-  addMsg("...", "ai");
+    lines.forEach((line, i) => {
+      const ly = cy - totalH/2 + lineH*(i+0.5);
+      if (strokeW > 0){
+        ctx.lineWidth = strokeW;
+        ctx.strokeStyle = state.strokeColor;
+        ctx.strokeText(line, cx, ly);
+      }
+      ctx.fillStyle = state.fillColor;
+      ctx.fillText(line, cx, ly);
+    });
+  }
 
-  const speakOn = document.getElementById("speakToggle").checked;
+  function render(){
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0,0,W,H);
+    if (state.imgEl && state.imgReady){
+      ctx.drawImage(state.imgEl, 0, 0, W, H);
+      emptyHint.style.display = 'none';
+    } else {
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(0,0,W,H);
+      emptyHint.style.display = 'flex';
+    }
+    drawCaption(state.top, 'top');
+    drawCaption(state.bottom, 'bottom');
+    syncOverlay();
+  }
 
-  fetch(AI_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: text, speak: speakOn })
-  })
-  .then(r => r.json())
-  .then(data => {
-    const box = document.getElementById("chatBox");
-    box.removeChild(box.lastChild);
-    addMsg(data.answer || "جوابی نیومد", "ai");
-  })
-  .catch(() => {
-    const box = document.getElementById("chatBox");
-    box.removeChild(box.lastChild);
-    addMsg("اتصال برقرار نشد", "ai");
+  function syncOverlay(){
+    positionOverlayEl(capTop, state.top, 'top');
+    positionOverlayEl(capBottom, state.bottom, 'bottom');
+  }
+
+  function positionOverlayEl(el, entry, anchorMode){
+    el.textContent = entry.text;
+    el.style.display = entry.text ? 'block' : 'none';
+    const fontPct = state.fontSizePct;
+    el.style.fontSize = `calc(${fontPct} * (var(--w,1px)))`; // fallback below
+    el.style.fontSize = fontPct + 'cqw';
+    el.style.webkitTextStrokeWidth = Math.max(0,(state.strokePct/100)*  (fontPct)) + 'cqw';
+    el.style.webkitTextStrokeColor = state.strokeColor;
+    el.style.color = state.fillColor;
+    let yPct = entry.yPct;
+    if (yPct === null){
+      yPct = anchorMode === 'top' ? state.marginPct + fontPct*0.6 : 100 - state.marginPct - fontPct*0.6;
+    }
+    el.style.right = (100-entry.xPct) + '%';
+    el.style.top = yPct + '%';
+  }
+
+  // container query unit fallback: set container-type on holder
+  holder.style.containerType = 'inline-size';
+
+  // ---------- drag logic ----------
+  function makeDraggable(el, entry, anchorMode){
+    let dragging = false;
+    el.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      el.classList.add('dragging');
+      el.setPointerCapture(e.pointerId);
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const rect = holder.getBoundingClientRect();
+      let xPct = ((e.clientX - rect.left) / rect.width) * 100;
+      let yPct = ((e.clientY - rect.top) / rect.height) * 100;
+      xPct = Math.min(97, Math.max(3, xPct));
+      yPct = Math.min(97, Math.max(3, yPct));
+      entry.xPct = xPct;
+      entry.yPct = yPct;
+      render();
+    });
+    function stop(e){
+      dragging = false;
+      el.classList.remove('dragging');
+    }
+    el.addEventListener('pointerup', stop);
+    el.addEventListener('pointercancel', stop);
+  }
+  makeDraggable(capTop, state.top, 'top');
+  makeDraggable(capBottom, state.bottom, 'bottom');
+
+  // ---------- image loading ----------
+  function loadImageFromSrc(src){
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const maxDim = 1000;
+      let w = img.naturalWidth, h = img.naturalHeight;
+      const scale = Math.min(1, maxDim / Math.max(w,h));
+      canvas.width = Math.round(w*scale);
+      canvas.height = Math.round(h*scale);
+      state.imgEl = img;
+      state.imgReady = true;
+      render();
+    };
+    img.src = src;
+  }
+
+  function handleFile(file){
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (e) => loadImageFromSrc(e.target.result);
+    reader.readAsDataURL(file);
+  }
+
+  els.fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+  els.dropZone.addEventListener('click', () => els.fileInput.click());
+  ['dragover'].forEach(ev => els.dropZone.addEventListener(ev, (e) => { e.preventDefault(); els.dropZone.style.background='rgba(255,255,255,0.08)'; }));
+  ['dragleave','drop'].forEach(ev => els.dropZone.addEventListener(ev, (e) => { e.preventDefault(); els.dropZone.style.background=''; }));
+  els.dropZone.addEventListener('drop', (e) => handleFile(e.dataTransfer.files[0]));
+
+  // ---------- generated gradient swatch templates (no external images) ----------
+  const swatchDefs = [
+    ['#FF6B4A','#FFD23F'],
+    ['#7C5CFF','#4FD1C5'],
+    ['#0B4F52','#0E6367'],
+    ['#F45B69','#2E294E'],
+    ['#F9C80E','#F86624'],
+  ];
+  swatchDefs.forEach(colors => {
+    const sw = document.createElement('div');
+    sw.className = 'swatch';
+    sw.style.background = `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
+    sw.title = 'استفاده به‌عنوان پس‌زمینه';
+    sw.addEventListener('click', () => {
+      const off = document.createElement('canvas');
+      off.width = 800; off.height = 800;
+      const octx = off.getContext('2d');
+      const grad = octx.createLinearGradient(0,0,800,800);
+      grad.addColorStop(0, colors[0]);
+      grad.addColorStop(1, colors[1]);
+      octx.fillStyle = grad;
+      octx.fillRect(0,0,800,800);
+      loadImageFromSrc(off.toDataURL());
+    });
+    els.swatchRow.appendChild(sw);
   });
-}
 
-document.getElementById("chatInput").addEventListener("keydown", function(e) {
-  if (e.key === "Enter") sendChat();
-});
+  // ---------- offline sample captions ----------
+  const samplePairs = [
+    ['وقتی می‌گن فردا امتحان داری','منی که دیشب سریال دیدم'],
+    ['انتظار','واقعیت'],
+    ['من قبل از باز کردن گوشی','من بعد از باز کردن گوشی'],
+    ['همه: بیدار شو','من: پنج دقیقه دیگه'],
+    ['وقتی وای‌فای قطع می‌شه','کل روز بی‌هدف'],
+    ['برنامه‌ریزی برای رژیم گرفتن','دیدن عکس پیتزا'],
+    ['می‌گم امروز زود می‌خوابم','ساعت ۳ صبح بیدارم'],
+    ['وقتی جواب امتحان رو حدس می‌زنم','و درست از آب درمیاد'],
+  ];
+  samplePairs.forEach(([t,b]) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.textContent = t.slice(0,14) + (t.length>14?'…':'');
+    chip.addEventListener('click', () => {
+      els.topText.value = t;
+      els.bottomText.value = b;
+      state.top.text = t;
+      state.bottom.text = b;
+      render();
+    });
+    els.sampleChips.appendChild(chip);
+  });
 
-// --- میکروفون (Web Speech API فار
+  // ---------- text inputs ----------
+  els.topText.addEventListener('input', () => { state.top.text = els.topText.value; render(); });
+  els.bottomText.addEventListener('input', () => { state.bottom.text = els.bottomText.value; render(); });
+
+  // ---------- sliders / colors ----------
+  els.fontSize.addEventListener('input', () => { state.fontSizePct = +els.fontSize.value; syncFieldsFromState(); render(); });
+  els.strokeWidth.addEventListener('input', () => { state.strokePct = +els.strokeWidth.value; syncFieldsFromState(); render(); });
+  els.marginSize.addEventListener('input', () => {
+    state.marginPct = +els.marginSize.value;
+    if (state.top.yPct !== null) state.top.yPct = null;
+    if (state.bottom.yPct !== null) state.bottom.yPct = null;
+    syncFieldsFromState();
+    render();
+  });
+  els.fillColor.addEventListener('input', () => { state.fillColor = els.fillColor.value; render(); });
+  els.strokeColor.addEventListener('input', () => { state.strokeColor = els.strokeColor.value; render(); });
+
+  // ---------- presets ----------
+  document.querySelectorAll('[data-preset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.preset;
+      state.top.xPct = 50; state.bottom.xPct = 50;
+      state.top.yPct = null; state.bottom.yPct = null;
+      if (mode === 'both'){
+        if (!state.top.text) { state.top.text = els.topText.value || ''; }
+        if (!state.bottom.text) { state.bottom.text = els.bottomText.value || ''; }
+      } else if (mode === 'topOnly'){
+        state.bottom.text = '';
+        els.bottomText.value = '';
+      } else if (mode === 'bottomOnly'){
+        state.top.text = '';
+        els.topText.value = '';
+      } else if (mode === 'center'){
+        state.top.yPct = 50; state.bottom.text = '';
+        els.bottomText.value = '';
+      }
+      render();
+    });
+  });
+
+  // ---------- reset ----------
+  els.resetBtn.addEventListener('click', () => {
+    state.fontSizePct = DEFAULTS.fontSizePct;
+    state.strokePct = DEFAULTS.strokePct;
+    state.marginPct = DEFAULTS.marginPct;
+    state.fillColor = DEFAULTS.fillColor;
+    state.strokeColor = DEFAULTS.strokeColor;
+    state.top.xPct = 50; state.top.yPct = null;
+    state.bottom.xPct = 50; state.bottom.yPct = null;
+    syncFieldsFromState();
+    render();
+  });
+
+  // ---------- download ----------
+  els.downloadBtn.addEventListener('click', () => {
+    render();
+    const link = document.createElement('a');
+    link.download = 'meme.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+
+  // ---------- AI caption suggestions ----------
+  els.aiBtn.addEventListener('click', async () => {
+    if (!state.imgEl || !state.imgReady){
+      els.aiStatus.textContent = 'اول یک عکس آپلود کن یا یک قالب انتخاب کن.';
+      return;
+    }
+    els.aiStatus.textContent = 'در حال تحلیل عکس...';
+    els.aiChips.innerHTML = '';
+    els.aiBtn.disabled = true;
+    try{
+      const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+      const response = await fetch('/api/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64 })
+      });
+      const parsed = await response.json();
+      if (!response.ok) throw new Error(parsed.error || 'server error');
+      const suggestions = parsed.suggestions || [];
+      if (!suggestions.length) throw new Error('empty');
+      els.aiStatus.textContent = 'یکی از پیشنهادها رو انتخاب کن:';
+      suggestions.forEach(s => {
+        const chip = document.createElement('div');
+        chip.className = 'chip';
+        chip.textContent = (s.top || '').slice(0,16) + ' / ' + (s.bottom || '').slice(0,16);
+        chip.addEventListener('click', () => {
+          els.topText.value = s.top || '';
+          els.bottomText.value = s.bottom || '';
+          state.top.text = s.top || '';
+          state.bottom.text = s.bottom || '';
+          render();
+        });
+        els.aiChips.appendChild(chip);
+      });
+    } catch(err){
+      els.aiStatus.textContent = 'دریافت پیشنهاد ممکن نشد، دوباره تلاش کن.';
+    } finally {
+      els.aiBtn.disabled = false;
+    }
+  });
+
+  // ---------- init ----------
+  syncFieldsFromState();
+  if (document.fonts && document.fonts.load){
+    document.fonts.load('900 40px Lalezar').then(render).catch(()=>{});
+  }
+  render();
+  window.addEventListener('resize', render);
+})();
+</script>
+</body>
+</html>
