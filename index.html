@@ -41,6 +41,14 @@
   #micBtn, #sendBtn { padding:14px 16px; border-radius:12px; border:none; background:#2196F3; color:#fff; }
   #micBtn.listening { background:#ff6b6b; }
 
+  #speakToggleRow { display:flex; align-items:center; gap:8px; justify-content:flex-end;
+                     font-size:13px; color:#8b93a3; margin-bottom:10px; }
+  #speakToggleRow input { width:18px; height:18px; }
+
+  #volumeBox { background:#1c2733; border-radius:14px; padding:14px; text-align:right; }
+  #volumeBox input[type=range] { width:100%; margin:10px 0; }
+  #volumeValue { font-size:20px; font-weight:600; }
+
   #secretBox { display:none; margin:16px 0; gap:8px; }
   #secretBox input { flex:1; padding:12px; font-size:14px; border-radius:10px; border:none;
                       background:#1c2733; color:#fff; text-align:center; }
@@ -103,10 +111,11 @@
 </div>
 
 <div class="section-title">صدا</div>
-<div class="grid3">
-<button onclick="btn(13)">صدا زیاد</button>
-<button onclick="btn(14)">صدا کم</button>
-<button onclick="btn(15)">قطع صدا</button>
+<div id="volumeBox">
+  <div>سطح صدا: <span id="volumeValue">50</span></div>
+  <input type="range" id="volumeSlider" min="1" max="100" value="50"
+         oninput="document.getElementById('volumeValue').innerText = this.value"
+         onchange="setVolume(this.value)">
 </div>
 
 <div class="section-title">قابلیت‌های ویژه</div>
@@ -166,6 +175,10 @@
 </div>
 
 <div class="section-title">دستیار هوشمند</div>
+<div id="speakToggleRow">
+  <label for="speakToggle">جواب از بلندگوی دستگاه هم پخش بشه</label>
+  <input type="checkbox" id="speakToggle" onchange="saveSpeakToggle()">
+</div>
 <div id="chatBox"></div>
 <div class="chatRow">
   <button id="micBtn" onclick="toggleMic()">🎤</button>
@@ -210,6 +223,12 @@ function showToast() {
   const t = document.getElementById("toast");
   t.classList.add("show");
   setTimeout(() => t.classList.remove("show"), 1200);
+}
+
+// --- تنظیم صدا با عدد ۱ تا ۱۰۰ (شماره‌ی فرستاده‌شده = ۱۰۰ + سطح صدا) ---
+function setVolume(level) {
+  const lvl = Math.max(1, Math.min(100, parseInt(level)));
+  btn(100 + lvl);
 }
 
 // --- حالت مهمونی ---
@@ -271,7 +290,7 @@ async function startQuiz() {
   document.getElementById("quizQuestion").innerText = "در حال دریافت سوال...";
   document.getElementById("quizOptions").innerHTML = "";
 
-  const cat = Math.random() < 0.5 ? 11 : 15; // ۱۱=فیلم، ۱۵=بازی ویدیویی
+  const cat = Math.random() < 0.5 ? 11 : 15;
   try {
     const resp = await fetch(`https://opentdb.com/api.php?amount=5&category=${cat}&type=multiple`);
     const data = await resp.json();
@@ -355,7 +374,6 @@ async function showLeaderboard() {
   }
 }
 
-// --- شمارش معکوس تا نوروز (تقریبی، ۲۱ اسفند/۲۱ مارس) ---
 function nowruzCountdown() {
   const now = new Date();
   let year = now.getFullYear();
@@ -365,7 +383,6 @@ function nowruzCountdown() {
   document.getElementById("nowruzBox").innerText = `🌱 ${days} روز تا نوروز مونده`;
 }
 
-// --- فال روزانه (یه جمله‌ی ثابت برای هر روز) ---
 const FORTUNES = [
   "امروز روز خوبیه برای شروع یه کار جدید.",
   "یه نفس عمیق بکش، همه‌چی درست می‌شه.",
@@ -391,7 +408,6 @@ function dailyFortune() {
   document.getElementById("fortuneBox").innerText = "🔮 فال امروز: " + FORTUNES[idx];
 }
 
-// --- شمارش معکوس شخصی ---
 function savePersonalCountdown() {
   const label = document.getElementById("pcLabel").value.trim();
   const date = document.getElementById("pcDate").value;
@@ -419,7 +435,6 @@ function renderPersonalCountdown() {
   box.innerText = `${label}: ${diffDays} روز مونده — ${mood}`;
 }
 
-// --- تایمر / یادآور (تا وقتی این صفحه بازه) ---
 let timerHandle = null;
 function startTimer() {
   const mins = parseFloat(document.getElementById("timerMinutes").value);
@@ -434,7 +449,6 @@ function startTimer() {
   }, mins * 60 * 1000);
 }
 
-// --- پیام به آینده (ذخیره روی فید Adafruit IO به اسم futuremsg) ---
 async function saveFutureMsg() {
   const text = document.getElementById("fmText").value.trim();
   const date = document.getElementById("fmDate").value;
@@ -477,6 +491,15 @@ dailyFortune();
 renderPersonalCountdown();
 checkFutureMsg();
 
+// --- سوییچ پخش صدای هوش مصنوعی از بلندگوی دستگاه ---
+function saveSpeakToggle() {
+  const on = document.getElementById("speakToggle").checked;
+  localStorage.setItem("aiSpeakEnabled", on ? "1" : "0");
+}
+if (localStorage.getItem("aiSpeakEnabled") === "1") {
+  document.getElementById("speakToggle").checked = true;
+}
+
 function addMsg(text, who) {
   const box = document.getElementById("chatBox");
   const div = document.createElement("div");
@@ -494,10 +517,12 @@ function sendChat() {
   input.value = "";
   addMsg("...", "ai");
 
+  const speakOn = document.getElementById("speakToggle").checked;
+
   fetch(AI_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: text })
+    body: JSON.stringify({ text: text, speak: speakOn })
   })
   .then(r => r.json())
   .then(data => {
@@ -517,45 +542,4 @@ document.getElementById("chatInput").addEventListener("keydown", function(e) {
 });
 
 let recognition = null;
-let listening = false;
-
-function toggleMic() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert("مرورگرت از میکروفون پشتیبانی نمی‌کنه");
-    return;
-  }
-  if (listening) {
-    recognition.stop();
-    return;
-  }
-  recognition = new SpeechRecognition();
-  recognition.lang = "fa-IR";
-  recognition.interimResults = false;
-
-  recognition.onstart = function() {
-    listening = true;
-    document.getElementById("micBtn").classList.add("listening");
-  };
-
-  recognition.onresult = function(event) {
-    const said = event.results[0][0].transcript;
-    document.getElementById("chatInput").value = said;
-    sendChat();
-  };
-
-  recognition.onerror = function() {
-    listening = false;
-    document.getElementById("micBtn").classList.remove("listening");
-  };
-
-  recognition.onend = function() {
-    listening = false;
-    document.getElementById("micBtn").classList.remove("listening");
-  };
-
-  recognition.start();
-}
-</script>
-</body>
-</html>
+let listeni
