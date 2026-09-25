@@ -6,7 +6,7 @@
 <title>دستیار رومیزی</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg1:#070a12; --bg2:#0d1526;
@@ -21,10 +21,11 @@
   html,body{ height:100%; }
 
   @keyframes fadeInUp{ from{ opacity:0; transform:translateY(18px);} to{ opacity:1; transform:translateY(0);} }
-  @keyframes bgShift{
-    0%{ background-position:10% -10%, 100% 0%, 50% 100%; }
-    50%{ background-position:25% 0%, 85% 10%, 55% 90%; }
-    100%{ background-position:10% -10%, 100% 0%, 50% 100%; }
+  /* پس‌زمینه با transform (GPU-friendly) به‌جای background-position (سنگین، باعث ریپینت کل صفحه می‌شد) */
+  @keyframes bgShiftT{
+    0%{ transform:translate(0,0); }
+    50%{ transform:translate(2.5%,2%); }
+    100%{ transform:translate(0,0); }
   }
   @keyframes orbPulse{
     0%,100%{ box-shadow:0 0 0 0 rgba(91,140,255,.55), 0 0 40px 8px rgba(0,224,198,.25); }
@@ -44,15 +45,29 @@
     margin:0; padding:18px 14px 48px;
     font-family:'Vazirmatn', sans-serif;
     color:var(--text);
+    background:linear-gradient(180deg, var(--bg1), var(--bg2));
+    min-height:100vh;
+    text-align:center;
+    position:relative;
+    overflow-x:hidden;
+  }
+  /* لایه‌ی پس‌زمینه‌ی متحرک، جدا از body، با transform (سبک برای گوشی‌های ضعیف) */
+  body::before{
+    content:"";
+    position:fixed;
+    inset:-8%;
     background:
       radial-gradient(900px 480px at 10% -10%, #1c2a55 0%, transparent 60%),
       radial-gradient(800px 460px at 100% 0%, #0f3a3a 0%, transparent 55%),
-      radial-gradient(700px 400px at 50% 100%, #3a1f4a 0%, transparent 55%),
-      linear-gradient(180deg, var(--bg1), var(--bg2));
-    background-size:160% 160%, 160% 160%, 160% 160%, 100% 100%;
-    animation:bgShift 18s ease-in-out infinite;
-    min-height:100vh;
-    text-align:center;
+      radial-gradient(700px 400px at 50% 100%, #3a1f4a 0%, transparent 55%);
+    animation:bgShiftT 20s ease-in-out infinite;
+    will-change:transform;
+    z-index:-1;
+    pointer-events:none;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    body::before, .orb{ animation:none !important; }
   }
 
   .brand{ margin:8px 0 22px; }
@@ -76,12 +91,23 @@
   }
   .status .dot{ width:7px; height:7px; border-radius:50%; background:var(--good); box-shadow:0 0 8px var(--good); animation:dotPulse 2s infinite; }
 
-  #appContent > *{ opacity:0; animation:fadeInUp .55s ease forwards; }
-  #appContent > *:nth-child(n+1){ animation-delay:calc(.04s * var(--i, 1)); }
+  #appContent > *{ opacity:0; animation:fadeInUp .5s ease forwards; }
+  #appContent > *:nth-child(1){ animation-delay:.02s }
+  #appContent > *:nth-child(2){ animation-delay:.05s }
+  #appContent > *:nth-child(3){ animation-delay:.08s }
+  #appContent > *:nth-child(4){ animation-delay:.11s }
+  #appContent > *:nth-child(5){ animation-delay:.14s }
+  #appContent > *:nth-child(6){ animation-delay:.17s }
+  #appContent > *:nth-child(7){ animation-delay:.20s }
+  #appContent > *:nth-child(8){ animation-delay:.23s }
+  #appContent > *:nth-child(9){ animation-delay:.26s }
+  #appContent > *:nth-child(10){ animation-delay:.29s }
+  #appContent > *:nth-child(11){ animation-delay:.32s }
+  #appContent > *:nth-child(12){ animation-delay:.35s }
+  #appContent > *:nth-child(n+13){ animation-delay:.38s }
 
   .card{
-    background:linear-gradient(180deg, rgba(24,36,68,.9), rgba(19,28,48,.9));
-    backdrop-filter:blur(6px);
+    background:linear-gradient(180deg, rgba(24,36,68,.97), rgba(19,28,48,.97));
     border:1px solid var(--line);
     border-radius:var(--radius);
     padding:16px;
@@ -130,9 +156,7 @@
 
   #lockScreen{
     position:fixed; inset:0;
-    background:
-      radial-gradient(900px 500px at 50% 0%, #1c2a55 0%, transparent 60%),
-      linear-gradient(180deg, var(--bg1), var(--bg2));
+    background:linear-gradient(180deg, var(--bg1), var(--bg2));
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     gap:14px; z-index:100; padding:20px;
   }
@@ -295,7 +319,7 @@
     <input type="password" id="wifiPass" placeholder="رمز وای‌فای جدید">
     <button onclick="sendWifiConfig()">اتصال به این وای‌فای</button>
   </div>
-  <div class="wifiNote">دستگاه سعی می‌کنه به این وای‌فای وصل بشه. اگه چند ثانیه موفق نشد، خودش برمی‌گرده به وای‌فای پیش‌فرضی که تو کدش تعریف شده تا هیچ‌وقت کامل آفلاین نمونه.</div>
+  <div class="wifiNote">پیام به دستگاه فرستاده می‌شه؛ رفتار نهایی (وصل‌شدن یا برگشت به وای‌فای قبلی) به کدی که روی WeMos نصبه بستگی داره.</div>
   <div id="wifiStatus" style="margin-top:8px; font-weight:600;"></div>
 </div>
 
@@ -386,14 +410,24 @@ if (localStorage.getItem("deskAssistantUnlocked") === "1") {
   document.getElementById("appContent").style.display = "block";
 }
 
+/* --- اصلاح‌شده: فیدبک فوری + تایم‌اوت + catch --- */
 function btn(id) {
-  fetch(PROXY_URL + "/?id=" + id)
-    .then(r => r.text()).then(t => { document.getElementById("toast").innerText = t; showToast(); });
+  const toast = document.getElementById("toast");
+  toast.innerText = "در حال ارسال...";
+  showToast();
+  const ctrl = new AbortController();
+  const killer = setTimeout(() => ctrl.abort(), 7000);
+  fetch(PROXY_URL + "/?id=" + id, { signal: ctrl.signal })
+    .then(r => r.text())
+    .then(t => { clearTimeout(killer); toast.innerText = t; showToast(); })
+    .catch(() => { clearTimeout(killer); toast.innerText = "اتصال برقرار نشد، دوباره امتحان کن"; showToast(); });
 }
 function showToast() {
   const t = document.getElementById("toast");
+  t.classList.remove("show");
+  void t.offsetWidth; // ریست انیمیشن اگه پشت‌سرهم زده بشه
   t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 1200);
+  setTimeout(() => t.classList.remove("show"), 1400);
 }
 
 function setVolume(level) {
@@ -683,6 +717,7 @@ async function saveFutureMsg(){
     status.innerText=`ذخیره شد ✅ (${picked.label}) همون روز که سایت رو باز کنی نشونت می‌دم.`;
   }catch(e){ status.innerText="خطا در ذخیره‌سازی"; }
 }
+/* اصلاح‌شده: تاریخ به‌صورت محلی خونده می‌شه، نه UTC (باگ افت/جلوافتادگی یک روزه رفع شد) */
 async function checkFutureMsg(){
   try{
     const resp=await fetch(`${LB_URL}?feed=futuremsg&limit=1`);
@@ -690,7 +725,9 @@ async function checkFutureMsg(){
     if(!data.length) return;
     const [dateStr, ...rest]=data[0].value.split("|");
     const text=rest.join("|");
-    const target=new Date(dateStr), now=new Date();
+    const [yy,mm,dd]=dateStr.split("-").map(Number);
+    const target=new Date(yy, mm-1, dd);
+    const now=new Date();
     const shownKey="futuremsgShown_"+dateStr;
     if(now>=target && !localStorage.getItem(shownKey)){
       localStorage.setItem(shownKey,"1");
