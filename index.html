@@ -1,4 +1,3 @@
-cat > index.html << 'EOF'
 <!DOCTYPE html>
 <html dir="rtl" lang="fa">
 <head>
@@ -62,7 +61,6 @@ cat > index.html << 'EOF'
   }
   .status .dot{ width:7px; height:7px; border-radius:50%; background:#3ddc84; box-shadow:0 0 8px #3ddc84; animation:dotPulse 2s infinite; }
 
-  /* ورود مرحله‌ای بخش‌ها */
   #appContent > *{ opacity:0; animation:fadeInUp .55s ease forwards; }
   #appContent > *:nth-child(1){ animation-delay:.03s }
   #appContent > *:nth-child(2){ animation-delay:.07s }
@@ -382,20 +380,17 @@ function showToast() {
   setTimeout(() => t.classList.remove("show"), 1200);
 }
 
-// --- تنظیم صدا با عدد ۱ تا ۱۰۰ (شماره‌ی فرستاده‌شده = ۱۰۰ + سطح صدا) ---
 function setVolume(level) {
   const lvl = Math.max(1, Math.min(100, parseInt(level)));
   btn(100 + lvl);
 }
 
-// --- حالت مهمونی ---
 function setParty(on) {
   btn(on ? 23 : 24);
   document.getElementById("partyOnBtn").classList.toggle("active", on);
   document.getElementById("partyOffBtn").classList.toggle("active", !on);
 }
 
-// --- رمز مخفی (روی عنوان بالای صفحه ۵ بار ضربه بزن تا ظاهر بشه) ---
 const SECRET_CODES = {
   "konami": 30,
   "mohandes": 31
@@ -427,7 +422,6 @@ document.getElementById("secretInput").addEventListener("keydown", function(e) {
   if (e.key === "Enter") checkSecret();
 });
 
-// --- مسابقه‌ی فیلم/بازی (OpenTDB) + جدول امتیازات (Adafruit IO از طریق Worker) ---
 const LB_URL = "https://leaderboard-proxy.kdkdke126.workers.dev";
 let quizQuestions = [];
 let quizIndex = 0;
@@ -648,7 +642,6 @@ dailyFortune();
 renderPersonalCountdown();
 checkFutureMsg();
 
-// --- سوییچ پخش صدای هوش مصنوعی از بلندگوی دستگاه ---
 function saveSpeakToggle() {
   const on = document.getElementById("speakToggle").checked;
   localStorage.setItem("aiSpeakEnabled", on ? "1" : "0");
@@ -698,7 +691,6 @@ document.getElementById("chatInput").addEventListener("keydown", function(e) {
   if (e.key === "Enter") sendChat();
 });
 
-// --- میکروفون (Web Speech API فارسی) ---
 let recognition = null;
 let isListening = false;
 
