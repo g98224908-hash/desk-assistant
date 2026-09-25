@@ -21,7 +21,6 @@
   html,body{ height:100%; }
 
   @keyframes fadeInUp{ from{ opacity:0; transform:translateY(18px);} to{ opacity:1; transform:translateY(0);} }
-  /* پس‌زمینه با transform (GPU-friendly) به‌جای background-position (سنگین، باعث ریپینت کل صفحه می‌شد) */
   @keyframes bgShiftT{
     0%{ transform:translate(0,0); }
     50%{ transform:translate(2.5%,2%); }
@@ -51,7 +50,6 @@
     position:relative;
     overflow-x:hidden;
   }
-  /* لایه‌ی پس‌زمینه‌ی متحرک، جدا از body، با transform (سبک برای گوشی‌های ضعیف) */
   body::before{
     content:"";
     position:fixed;
@@ -385,8 +383,9 @@
 </div>
 </div>
 
-<div id="toast" class="toast">ارسال شد</div>
 </div>
+
+<div id="toast" class="toast">ارسال شد</div>
 
 <script>
 const PROXY_URL = "https://desk-assistant-proxy.kdkdke126.workers.dev";
@@ -410,7 +409,6 @@ if (localStorage.getItem("deskAssistantUnlocked") === "1") {
   document.getElementById("appContent").style.display = "block";
 }
 
-/* --- اصلاح‌شده: فیدبک فوری + تایم‌اوت + catch --- */
 function btn(id) {
   const toast = document.getElementById("toast");
   toast.innerText = "در حال ارسال...";
@@ -425,7 +423,7 @@ function btn(id) {
 function showToast() {
   const t = document.getElementById("toast");
   t.classList.remove("show");
-  void t.offsetWidth; // ریست انیمیشن اگه پشت‌سرهم زده بشه
+  void t.offsetWidth;
   t.classList.add("show");
   setTimeout(() => t.classList.remove("show"), 1400);
 }
@@ -463,7 +461,6 @@ function checkSecret() {
 }
 document.getElementById("secretInput").addEventListener("keydown", e => { if (e.key === "Enter") checkSecret(); });
 
-/* ---------------- وای‌فای ---------------- */
 async function sendWifiConfig() {
   const ssid = document.getElementById("wifiSsid").value.trim();
   const pass = document.getElementById("wifiPass").value.trim();
@@ -482,7 +479,6 @@ async function sendWifiConfig() {
   }
 }
 
-/* ---------------- سوالات فارسی ---------------- */
 const QUIZ_BANK = [
   {q:"پایتخت ایران کدام شهر است؟", opts:["تهران","اصفهان","شیراز","مشهد"], a:"تهران"},
   {q:"بزرگ‌ترین سیاره منظومه شمسی کدام است؟", opts:["زمین","مشتری","زحل","مریخ"], a:"مشتری"},
@@ -558,7 +554,6 @@ async function showLeaderboard() {
   } catch (e) { box.innerHTML = "خطا در دریافت جدول امتیازات"; }
 }
 
-/* ---------------- تقویم شمسی (jalaali) ---------------- */
 function div(a,b){ return ~~(a/b); }
 function mod(a,b){ return a - ~~(a/b)*b; }
 function jalCal(jy){
@@ -644,7 +639,6 @@ function readJalaliPicker(containerId){
 buildJalaliPicker("pcDateBox", 5);
 buildJalaliPicker("fmDateBox", 3);
 
-/* ---------------- نوروز و فال روز ---------------- */
 function nowruzCountdown(){
   const now=new Date(); let year=now.getFullYear(); let target=new Date(year,2,21,0,0,0);
   if(now>=target) target=new Date(year+1,2,21,0,0,0);
@@ -659,7 +653,6 @@ function dailyFortune(){
   document.getElementById("fortuneBox").innerText="🔮 فال امروز: "+FORTUNES[idx];
 }
 
-/* ---------------- شمارش معکوس شخصی ---------------- */
 function savePersonalCountdown(){
   const label=document.getElementById("pcLabel").value.trim();
   if(!label) return;
@@ -685,7 +678,6 @@ function renderPersonalCountdown(){
   box.innerText=`${label} (${jlabel}): ${diffDays} روز مونده — ${mood}`;
 }
 
-/* ---------------- تایمر / یادآور صوتی ---------------- */
 let timerHandle=null;
 async function startTimer(){
   const mins=parseFloat(document.getElementById("timerMinutes").value);
@@ -702,7 +694,6 @@ async function startTimer(){
   timerHandle=setTimeout(()=>{ status.innerText=`⏰ ${label}`; alert("⏰ "+label); }, mins*60*1000);
 }
 
-/* ---------------- پیام به آینده ---------------- */
 async function saveFutureMsg(){
   const text=document.getElementById("fmText").value.trim();
   const status=document.getElementById("fmStatus");
@@ -717,7 +708,6 @@ async function saveFutureMsg(){
     status.innerText=`ذخیره شد ✅ (${picked.label}) همون روز که سایت رو باز کنی نشونت می‌دم.`;
   }catch(e){ status.innerText="خطا در ذخیره‌سازی"; }
 }
-/* اصلاح‌شده: تاریخ به‌صورت محلی خونده می‌شه، نه UTC (باگ افت/جلوافتادگی یک روزه رفع شد) */
 async function checkFutureMsg(){
   try{
     const resp=await fetch(`${LB_URL}?feed=futuremsg&limit=1`);
@@ -738,7 +728,6 @@ async function checkFutureMsg(){
 
 nowruzCountdown(); dailyFortune(); renderPersonalCountdown(); checkFutureMsg();
 
-/* ---------------- چت هوش مصنوعی ---------------- */
 function saveSpeakToggle(){
   const on=document.getElementById("speakToggle").checked;
   localStorage.setItem("aiSpeakEnabled", on ? "1":"0");
