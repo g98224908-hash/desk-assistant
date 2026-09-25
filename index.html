@@ -740,21 +740,39 @@ function addMsg(text, who){
   div.className="msg "+who; div.innerText=text;
   box.appendChild(div); box.scrollTop=box.scrollHeight;
 }
+
 function sendChat(){
   const input=document.getElementById("chatInput");
   const text=input.value.trim();
   if(!text) return;
   addMsg(text,"user"); input.value=""; addMsg("...","ai");
   const speakOn=document.getElementById("speakToggle").checked;
-  fetch(AI_URL, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({text, speak:speakOn}) })
-  .then(r=>r.json()).then(data=>{
+
+  const ctrl = new AbortController();
+  const killer = setTimeout(() => ctrl.abort(), 15000);
+
+  fetch(AI_URL, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({text, speak:speakOn}),
+    signal: ctrl.signal
+  })
+  .then(r=>{
+    if(!r.ok) throw new Error("bad-status");
+    return r.json();
+  })
+  .then(data=>{
+    clearTimeout(killer);
     const box=document.getElementById("chatBox"); box.removeChild(box.lastChild);
     addMsg(data.answer || "جوابی نیومد","ai");
-  }).catch(()=>{
+  })
+  .catch(()=>{
+    clearTimeout(killer);
     const box=document.getElementById("chatBox"); box.removeChild(box.lastChild);
-    addMsg("اتصال برقرار نشد","ai");
+    addMsg("اتصال با هوش مصنوعی برقرار نشد، دوباره امتحان کن","ai");
   });
 }
+
 document.getElementById("chatInput").addEventListener("keydown", e=>{ if(e.key==="Enter") sendChat(); });
 
 let recognition=null, isListening=false;
@@ -776,4 +794,4 @@ function toggleMic(){
 }
 </script>
 </body>
-</html>
+  </html>
