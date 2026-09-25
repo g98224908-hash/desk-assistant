@@ -4,78 +4,148 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>دستیار رومیزی</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; }
-  body { font-family: sans-serif; background:#0f1115; color:#fff; text-align:center;
-         padding:20px; margin:0; min-height:100vh; }
-  h2 { font-weight:600; font-size:22px; margin:0 0 4px; }
-  .status { font-size:13px; color:#8b93a3; margin-bottom:24px; }
-  .section-title { font-size:13px; color:#8b93a3; margin:24px 0 12px; text-align:right; }
-  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
-  button { padding:18px 8px; font-size:15px; border:none; border-radius:14px;
-           background:#1c2733; color:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.3); }
-  button:active { background:#2196F3; transform:scale(0.97); }
-  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
-           background:#2196F3; color:#fff; padding:10px 20px; border-radius:20px;
-           font-size:13px; opacity:0; transition:opacity 0.3s; pointer-events:none; }
-  .toast.show { opacity:1; }
-  #lockScreen { position:fixed; inset:0; background:#0f1115; display:flex;
-                flex-direction:column; align-items:center; justify-content:center;
-                gap:14px; z-index:100; padding:20px; }
-  #lockScreen input { padding:14px; font-size:16px; border-radius:12px; border:none;
-                       width:220px; text-align:center; }
-  #lockScreen button { padding:14px 20px; font-size:15px; border:none; border-radius:12px;
-                        background:#2196F3; color:#fff; width:220px; }
-  #lockError { color:#ff6b6b; font-size:13px; min-height:18px; }
-  #appContent { display:none; }
+  :root{
+    --bg1:#060810; --bg2:#0d1220;
+    --card:#131c30; --card2:#182238;
+    --line:#26324a;
+    --text:#eef2f8; --muted:#8b96ab;
+    --accent:#3b82f6; --accent2:#8b5cf6; --accent3:#ff9d3d;
+    --danger:#ff6b6b;
+    --radius:18px;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
 
-  #chatBox { text-align:right; background:#1c2733; border-radius:14px; padding:12px;
-             min-height:120px; max-height:260px; overflow-y:auto; margin-bottom:10px; }
-  .msg { padding:8px 12px; border-radius:10px; margin:6px 0; font-size:14px; line-height:1.5; }
-  .msg.user { background:#2196F3; margin-left:30px; }
-  .msg.ai { background:#2a3542; margin-right:30px; }
-  .chatRow { display:flex; gap:8px; }
-  #chatInput { flex:1; padding:14px; font-size:15px; border-radius:12px; border:none;
-               background:#1c2733; color:#fff; }
-  #micBtn, #sendBtn { padding:14px 16px; border-radius:12px; border:none; background:#2196F3; color:#fff; }
-  #micBtn.listening { background:#ff6b6b; }
+  @keyframes fadeInUp{ from{ opacity:0; transform:translateY(16px);} to{ opacity:1; transform:translateY(0);} }
+  @keyframes float{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-7px);} }
+  @keyframes dotPulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(61,220,132,.55);} 50%{ box-shadow:0 0 0 7px rgba(61,220,132,0);} }
+  @keyframes orbMove1{ 0%,100%{ transform:translate(0,0);} 50%{ transform:translate(30px,40px);} }
+  @keyframes orbMove2{ 0%,100%{ transform:translate(0,0);} 50%{ transform:translate(-40px,-20px);} }
+  @keyframes toastPop{ 0%{ opacity:0; transform:translate(-50%,12px) scale(.92);} 60%{ opacity:1; transform:translate(-50%,-4px) scale(1.03);} 100%{ opacity:1; transform:translate(-50%,0) scale(1);} }
+  @keyframes shine{ 0%{ background-position:-120% 0;} 100%{ background-position:220% 0;} }
+  @keyframes gradientMove{ 0%{ background-position:0% 50%;} 50%{ background-position:100% 50%;} 100%{ background-position:0% 50%;} }
+  @keyframes borderGlow{ 0%,100%{ box-shadow:0 0 0 0 rgba(59,130,246,0);} 50%{ box-shadow:0 0 26px 0 rgba(139,92,246,.3);} }
+  @keyframes spin{ to{ transform:rotate(360deg);} }
+  @keyframes pulseIcon{ 0%,100%{ transform:scale(1);} 50%{ transform:scale(1.15);} }
 
-  #speakToggleRow { display:flex; align-items:center; gap:8px; justify-content:flex-end;
-                     font-size:13px; color:#8b93a3; margin-bottom:10px; }
-  #speakToggleRow input { width:18px; height:18px; }
+  body{
+    margin:0; padding:18px 14px 40px; font-family:'Vazirmatn', sans-serif; color:var(--text);
+    background:linear-gradient(180deg, var(--bg1), var(--bg2));
+    min-height:100vh; text-align:center; overflow-x:hidden; position:relative;
+  }
+  .orb{ position:fixed; border-radius:50%; filter:blur(60px); opacity:.35; z-index:0; pointer-events:none; }
+  .orb1{ width:260px; height:260px; top:-60px; right:-60px; background:var(--accent2); animation:orbMove1 12s ease-in-out infinite; }
+  .orb2{ width:220px; height:220px; bottom:10%; left:-60px; background:var(--accent); animation:orbMove2 14s ease-in-out infinite; }
 
-  #volumeBox { background:#1c2733; border-radius:14px; padding:14px; text-align:right; }
-  #volumeBox input[type=range] { width:100%; margin:10px 0; }
-  #volumeValue { font-size:20px; font-weight:600; }
+  .brand{ margin:6px 0 26px; position:relative; z-index:1; }
+  .brand .emoji{ font-size:38px; line-height:1; margin-bottom:6px; display:inline-block; animation:float 3.4s ease-in-out infinite; }
+  h2{
+    font-weight:900; font-size:25px; margin:0 0 6px; letter-spacing:.2px;
+    background:linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3), var(--accent));
+    background-size:300% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    animation:gradientMove 6s ease infinite;
+  }
+  .status{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted); background:rgba(255,255,255,0.04); border:1px solid var(--line); padding:5px 12px; border-radius:999px; backdrop-filter:blur(6px); }
+  .status .dot{ width:7px; height:7px; border-radius:50%; background:#3ddc84; box-shadow:0 0 8px #3ddc84; animation:dotPulse 2s infinite; }
 
-  #secretBox { display:none; margin:16px 0; gap:8px; }
-  #secretBox input { flex:1; padding:12px; font-size:14px; border-radius:10px; border:none;
-                      background:#1c2733; color:#fff; text-align:center; }
-  #secretBox button { padding:12px 16px; background:#2196F3; }
-  .partyOn button.active { background:#ff9800; }
+  #appContent{ position:relative; z-index:1; display:none; max-width:480px; margin:0 auto; }
+  #appContent > *{ opacity:0; animation:fadeInUp .55s ease forwards; }
+  #appContent > *:nth-child(n+1){ animation-delay:.05s }
+  .msg, .lbRow, #quizOptions button{ animation:fadeInUp .35s ease; }
 
-  #quizBox { display:none; text-align:right; background:#1c2733; border-radius:14px;
-             padding:14px; margin-top:10px; }
-  #quizProgress { font-size:12px; color:#8b93a3; margin-bottom:8px; }
-  #quizQuestion { font-size:15px; margin-bottom:10px; line-height:1.6; }
-  #quizOptions { display:flex; flex-direction:column; gap:8px; }
-  #quizOptions button { text-align:right; width:100%; }
-  #leaderboardBox { display:none; text-align:right; background:#1c2733; border-radius:14px;
-                     padding:14px; margin-top:10px; font-size:14px; }
-  .lbRow { padding:6px 0; border-bottom:1px solid #2a3542; }
+  .card{
+    background:linear-gradient(180deg, rgba(24,34,56,.85), rgba(19,28,48,.85));
+    border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-bottom:16px;
+    text-align:right; box-shadow:0 10px 24px -14px rgba(0,0,0,0.6); backdrop-filter:blur(10px);
+  }
+  .card.glow{ animation:borderGlow 3.5s ease-in-out infinite; }
+  .section-title{ display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--muted); margin:26px 4px 12px; text-align:right; }
+  .section-title .ico{ font-size:16px; animation:pulseIcon 2.2s ease-in-out infinite; }
+  .section-title::after{ content:""; flex:1; height:1px; background:linear-gradient(90deg, var(--line), transparent); }
+  .card > .section-title{ margin-top:0; }
 
-  .miniBox { background:#1c2733; border-radius:14px; padding:12px; margin-top:10px;
-             text-align:right; font-size:14px; line-height:1.6; }
-  .miniForm { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
-  .miniForm input { padding:10px; font-size:14px; border-radius:10px; border:none;
-                     background:#0f1115; color:#fff; text-align:right; }
-  .miniForm button { background:#2196F3; }
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+  button{
+    position:relative; overflow:hidden; padding:16px 8px; font-size:14.5px; font-weight:600; font-family:inherit;
+    border:1px solid var(--line); border-radius:14px; background:var(--card2); color:var(--text);
+    box-shadow:0 4px 10px -6px rgba(0,0,0,0.5);
+    transition:transform .12s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+  button:hover{ transform:translateY(-2px); box-shadow:0 8px 16px -8px rgba(0,0,0,0.55); border-color:#3a4d78; }
+  button:active{ background:linear-gradient(135deg,var(--accent),var(--accent2)); border-color:var(--accent); transform:scale(0.96); }
+  button::after{ content:""; position:absolute; inset:0; background:linear-gradient(100deg, transparent 30%, rgba(255,255,255,.10) 50%, transparent 70%); background-size:250% 100%; background-position:-120% 0; pointer-events:none; }
+  button:active::after{ animation:shine .55s ease; }
+  .btnPrimary{ background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; color:#fff; font-weight:700; }
+
+  .toast{ position:fixed; bottom:22px; left:50%; transform:translate(-50%,0); background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; padding:10px 22px; border-radius:999px; font-size:13px; font-weight:600; opacity:0; pointer-events:none; box-shadow:0 8px 20px -6px rgba(59,130,246,.6); z-index:50; }
+  .toast.show{ opacity:1; animation:toastPop .4s ease; }
+
+  #lockScreen{ position:fixed; inset:0; background:linear-gradient(180deg, var(--bg1), var(--bg2)); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; z-index:100; padding:20px; }
+  #lockScreen .emoji{ font-size:42px; margin-bottom:4px; animation:float 3.4s ease-in-out infinite; }
+  #lockScreen input{ padding:14px; font-size:16px; border-radius:12px; border:1px solid var(--line); width:240px; text-align:center; background:var(--card2); color:var(--text); font-family:inherit; }
+  #lockScreen input:focus{ outline:none; border-color:var(--accent); }
+  #lockScreen button{ padding:14px 20px; font-size:15px; border:none; border-radius:12px; background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; width:240px; font-weight:700; }
+  #lockError{ color:var(--danger); font-size:13px; min-height:18px; }
+
+  #chatBox{ text-align:right; background:var(--card2); border:1px solid var(--line); border-radius:14px; padding:12px; min-height:120px; max-height:280px; overflow-y:auto; margin-bottom:10px; }
+  .msg{ padding:9px 13px; border-radius:12px; margin:6px 0; font-size:14px; line-height:1.6; }
+  .msg.user{ background:linear-gradient(135deg,var(--accent),var(--accent2)); margin-left:26px; }
+  .msg.ai{ background:var(--card); border:1px solid var(--line); margin-right:26px; }
+  .chatRow{ display:flex; gap:8px; }
+  #chatInput{ flex:1; padding:14px; font-size:15px; border-radius:12px; border:1px solid var(--line); background:var(--card2); color:var(--text); font-family:inherit; }
+  #chatInput:focus{ outline:none; border-color:var(--accent); }
+  #micBtn, #sendBtn{ padding:14px 16px; border-radius:12px; border:none; background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; }
+  #micBtn.listening{ background:var(--danger); animation:pulse 1.1s infinite; }
+  @keyframes pulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(255,107,107,.55);} 50%{ box-shadow:0 0 0 8px rgba(255,107,107,0);} }
+
+  #speakToggleRow{ display:flex; align-items:center; gap:8px; justify-content:flex-end; font-size:13px; color:var(--muted); margin-bottom:10px; }
+  #speakToggleRow input{ width:18px; height:18px; accent-color:var(--accent); }
+
+  #volumeBox{ background:var(--card2); border:1px solid var(--line); border-radius:14px; padding:14px; text-align:right; }
+  #volumeBox input[type=range]{ width:100%; margin:12px 0 4px; accent-color:var(--accent); }
+  #volumeValue{ font-size:20px; font-weight:800; color:var(--accent); }
+
+  #secretBox{ display:none; margin:16px 0; gap:8px; }
+  #secretBox input{ flex:1; padding:12px; font-size:14px; border-radius:10px; border:1px solid var(--line); background:var(--card2); color:var(--text); text-align:center; font-family:inherit; }
+  #secretBox button{ padding:12px 16px; background:var(--accent); border:none; color:#fff; }
+  #partyGrid button.active{ background:linear-gradient(135deg,var(--accent3),#ffd23d); border-color:var(--accent3); color:#1a1200; }
+
+  #quizBox{ display:none; text-align:right; background:var(--card2); border:1px solid var(--line); border-radius:14px; padding:14px; margin-top:10px; }
+  #quizProgress{ font-size:12px; color:var(--muted); margin-bottom:8px; }
+  #quizQuestion{ font-size:15px; margin-bottom:10px; line-height:1.7; font-weight:600; }
+  #quizOptions{ display:flex; flex-direction:column; gap:8px; }
+  #quizOptions button{ text-align:right; width:100%; }
+  #quizOptions button.correct{ background:#1f4d2e; border-color:#2fae56; }
+  #quizOptions button.wrong{ background:#4d1f1f; border-color:#ae2f2f; }
+  #leaderboardBox{ display:none; text-align:right; background:var(--card2); border:1px solid var(--line); border-radius:14px; padding:14px; margin-top:10px; font-size:14px; }
+  .lbRow{ padding:7px 0; border-bottom:1px solid var(--line); }
+  .lbRow:last-child{ border-bottom:none; }
+
+  .miniBox{ background:var(--card2); border:1px solid var(--line); border-radius:14px; padding:14px; margin-top:10px; text-align:right; font-size:14px; line-height:1.7; font-weight:600; color:var(--muted); }
+  .miniForm{ display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+  .miniForm input{ padding:11px; font-size:14px; border-radius:10px; border:1px solid var(--line); background:var(--bg1); color:var(--text); text-align:right; font-family:inherit; }
+  .miniForm button{ background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; color:#fff; font-weight:700; }
+
+  .selRow{ display:flex; gap:6px; }
+  .selRow select{ flex:1; padding:11px 6px; font-size:13.5px; border-radius:10px; border:1px solid var(--line); background:var(--bg1); color:var(--text); text-align:center; font-family:inherit; }
+
+  .wifiStatusBox{ font-size:13px; margin-top:8px; display:flex; align-items:center; gap:8px; justify-content:flex-end; }
+  .spinner{ width:14px; height:14px; border-radius:50%; border:2px solid var(--line); border-top-color:var(--accent); animation:spin .8s linear infinite; display:none; }
+  .spinner.show{ display:inline-block; }
+  .wifiHint{ font-size:11.5px; color:var(--muted); margin-top:6px; text-align:right; line-height:1.6; }
 </style>
 </head>
 <body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
 
 <div id="lockScreen">
+  <div class="emoji">🖥️</div>
   <h2>دستیار رومیزی</h2>
   <input type="password" id="passInput" placeholder="رمز عبور" autofocus>
   <button onclick="checkPass()">ورود</button>
@@ -83,34 +153,42 @@
 </div>
 
 <div id="appContent">
-<h2 id="titleTap" onclick="titleTap()">دستیار رومیزی</h2>
-<div class="status">کنترل از هرجا</div>
+
+<div class="brand">
+  <div class="emoji">🖥️</div>
+  <h2 id="titleTap" onclick="titleTap()">دستیار رومیزی</h2>
+  <div class="status"><span class="dot"></span>کنترل از هرجا</div>
+</div>
 
 <div id="secretBox" class="chatRow">
   <input type="text" id="secretInput" placeholder="رمز مخفی رو وارد کن">
   <button onclick="checkSecret()">تایید</button>
 </div>
 
+<div class="card">
 <div class="grid">
-<button onclick="btn(1)">دما</button>
-<button onclick="btn(2)">ساعت</button>
-<button onclick="btn(3)">آب‌وهوا</button>
-<button onclick="btn(4)">تاریخ شمسی</button>
-<button onclick="btn(5)">تعطیلی امروز</button>
-<button onclick="btn(6)">تعطیلی فردا</button>
-<button onclick="btn(7)">جمله ۱</button>
-<button onclick="btn(8)">جمله ۲</button>
+<button onclick="btn(1)">🌡️ دما</button>
+<button onclick="btn(2)">🕒 ساعت</button>
+<button onclick="btn(3)">☁️ آب‌وهوا</button>
+<button onclick="btn(4)">📅 تاریخ شمسی</button>
+<button onclick="btn(5)">📌 تعطیلی امروز</button>
+<button onclick="btn(6)">📌 تعطیلی فردا</button>
+<button onclick="btn(7)">💬 جمله ۱</button>
+<button onclick="btn(8)">💬 جمله ۲</button>
+</div>
 </div>
 
-<div class="section-title">موزیک</div>
+<div class="section-title"><span class="ico">🎵</span>موزیک</div>
+<div class="card">
 <div class="grid">
-<button onclick="btn(9)">پخش / توقف</button>
-<button onclick="btn(10)">توقف کامل</button>
-<button onclick="btn(11)">آهنگ بعدی</button>
-<button onclick="btn(12)">آهنگ قبلی</button>
+<button onclick="btn(9)">▶️ پخش / توقف</button>
+<button onclick="btn(10)">⏹️ توقف کامل</button>
+<button onclick="btn(11)">⏭️ آهنگ بعدی</button>
+<button onclick="btn(12)">⏮️ آهنگ قبلی</button>
+</div>
 </div>
 
-<div class="section-title">صدا</div>
+<div class="section-title"><span class="ico">🔊</span>صدا</div>
 <div id="volumeBox">
   <div>سطح صدا: <span id="volumeValue">50</span></div>
   <input type="range" id="volumeSlider" min="1" max="100" value="50"
@@ -118,17 +196,31 @@
          onchange="setVolume(this.value)">
 </div>
 
-<div class="section-title">قابلیت‌های ویژه</div>
-<div class="grid">
-<button onclick="btn(16)">آمار من</button>
-<button onclick="btn(17)">فال حافظ</button>
-</div>
-<div class="grid" id="partyGrid">
-<button id="partyOnBtn" onclick="setParty(true)">حالت مهمونی روشن</button>
-<button id="partyOffBtn" onclick="setParty(false)">حالت مهمونی خاموش</button>
+<div class="section-title"><span class="ico">📶</span>تنظیم وای‌فای دستگاه</div>
+<div class="card glow">
+  <div class="miniForm">
+    <input type="text" id="wifiSsid" placeholder="اسم وای‌فای (SSID)">
+    <input type="text" id="wifiPass" placeholder="رمز وای‌فای">
+    <button onclick="saveWifiConfig()" class="btnPrimary">📡 اتصال به این وای‌فای</button>
+  </div>
+  <div class="wifiStatusBox"><span class="spinner" id="wifiSpinner"></span><span id="wifiStatus"></span></div>
+  <div class="wifiHint">⚠️ منطق «اگه وصل نشد برگرد به وای‌فای قبلی» باید داخل کد WeMos نوشته بشه؛ این فرم فقط اطلاعات رو می‌فرسته.</div>
 </div>
 
-<div class="section-title">مسابقه و امتیازات</div>
+<div class="section-title"><span class="ico">✨</span>قابلیت‌های ویژه</div>
+<div class="card">
+<div class="grid">
+<button onclick="btn(16)">📊 آمار من</button>
+<button onclick="btn(17)">🔮 فال حافظ</button>
+</div>
+<div class="grid" id="partyGrid" style="margin-top:10px;">
+<button id="partyOnBtn" onclick="setParty(true)">🎉 حالت مهمونی روشن</button>
+<button id="partyOffBtn" onclick="setParty(false)">🌙 حالت مهمونی خاموش</button>
+</div>
+</div>
+
+<div class="section-title"><span class="ico">🏆</span>مسابقه و امتیازات</div>
+<div class="card">
 <div class="grid">
 <button onclick="startQuiz()">🎮 شروع مسابقه</button>
 <button onclick="showLeaderboard()">🏆 جدول امتیازات</button>
@@ -139,8 +231,9 @@
   <div id="quizOptions"></div>
 </div>
 <div id="leaderboardBox"></div>
+</div>
 
-<div class="section-title">زمان و یادآوری</div>
+<div class="section-title"><span class="ico">⏳</span>زمان و یادآوری</div>
 <div class="miniBox" id="nowruzBox"></div>
 <div class="miniBox" id="fortuneBox"></div>
 
@@ -148,7 +241,11 @@
   شمارش معکوس شخصی
   <div class="miniForm">
     <input type="text" id="pcLabel" placeholder="اسم مناسبت (مثلاً امتحان ریاضی)">
-    <input type="date" id="pcDate">
+    <div class="selRow">
+      <select id="pcDay"></select>
+      <select id="pcMonth"></select>
+      <select id="pcYear"></select>
+    </div>
     <button onclick="savePersonalCountdown()">ذخیره</button>
   </div>
   <div id="pcResult" style="margin-top:8px;"></div>
@@ -162,19 +259,25 @@
     <button onclick="startTimer()">شروع تایمر</button>
   </div>
   <div id="timerStatus" style="margin-top:8px;"></div>
+  <div class="wifiHint">⚠️ الان هم روی خود سایت (اگه صفحه باز بمونه) و هم روی فید دستگاه ارسال می‌شه، ولی دستگاه فعلاً فقط می‌تونه یه بوق عمومی بزنه، نه متن دلخواهت رو بخونه.</div>
 </div>
 
 <div class="miniBox">
   پیام به آینده
   <div class="miniForm">
     <input type="text" id="fmText" placeholder="پیامت چیه؟">
-    <input type="date" id="fmDate">
+    <div class="selRow">
+      <select id="fmDay"></select>
+      <select id="fmMonth"></select>
+      <select id="fmYear"></select>
+    </div>
     <button onclick="saveFutureMsg()">ذخیره‌ی پیام</button>
   </div>
   <div id="fmStatus" style="margin-top:8px;"></div>
 </div>
 
-<div class="section-title">دستیار هوشمند</div>
+<div class="section-title"><span class="ico">🤖</span>دستیار هوشمند</div>
+<div class="card">
 <div id="speakToggleRow">
   <label for="speakToggle">جواب از بلندگوی دستگاه هم پخش بشه</label>
   <input type="checkbox" id="speakToggle" onchange="saveSpeakToggle()">
@@ -185,6 +288,7 @@
   <input type="text" id="chatInput" placeholder="پیامت رو بنویس یا میکروفون بزن...">
   <button id="sendBtn" onclick="sendChat()">ارسال</button>
 </div>
+</div>
 
 <div id="toast" class="toast">ارسال شد</div>
 </div>
@@ -192,6 +296,7 @@
 <script>
 const PROXY_URL = "https://desk-assistant-proxy.kdkdke126.workers.dev";
 const AI_URL = "https://desk-assistant-ai.kdkdke126.workers.dev";
+const LB_URL = "https://leaderboard-proxy.kdkdke126.workers.dev";
 const SITE_PASSWORD = "Mm17881788@";
 
 function checkPass() {
@@ -204,154 +309,100 @@ function checkPass() {
     document.getElementById("lockError").innerText = "رمز اشتباهه";
   }
 }
-
-document.getElementById("passInput").addEventListener("keydown", function(e) {
-  if (e.key === "Enter") checkPass();
-});
-
+document.getElementById("passInput").addEventListener("keydown", e => { if (e.key === "Enter") checkPass(); });
 if (localStorage.getItem("deskAssistantUnlocked") === "1") {
   document.getElementById("lockScreen").style.display = "none";
   document.getElementById("appContent").style.display = "block";
 }
 
 function btn(id) {
-  fetch(PROXY_URL + "/?id=" + id)
-    .then(r => r.text()).then(t => { document.getElementById("toast").innerText = t; showToast(); });
+  fetch(PROXY_URL + "/?id=" + id).then(r => r.text()).then(t => { document.getElementById("toast").innerText = t; showToast(); });
 }
-
-function showToast() {
+function showToast(msg) {
   const t = document.getElementById("toast");
+  if (msg) t.innerText = msg;
   t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 1200);
+  setTimeout(() => t.classList.remove("show"), 1400);
 }
-
-// --- تنظیم صدا با عدد ۱ تا ۱۰۰ (شماره‌ی فرستاده‌شده = ۱۰۰ + سطح صدا) ---
-function setVolume(level) {
-  const lvl = Math.max(1, Math.min(100, parseInt(level)));
-  btn(100 + lvl);
-}
-
-// --- حالت مهمونی ---
+function setVolume(level) { btn(100 + Math.max(1, Math.min(100, parseInt(level)))); }
 function setParty(on) {
   btn(on ? 23 : 24);
   document.getElementById("partyOnBtn").classList.toggle("active", on);
   document.getElementById("partyOffBtn").classList.toggle("active", !on);
 }
 
-// --- رمز مخفی (روی عنوان بالای صفحه ۵ بار ضربه بزن تا ظاهر بشه) ---
-const SECRET_CODES = {
-  "konami": 30,
-  "mohandes": 31
-};
-let tapCount = 0;
-let tapTimer = null;
-
+const SECRET_CODES = { "konami": 30, "mohandes": 31 };
+let tapCount = 0, tapTimer = null;
 function titleTap() {
   tapCount++;
   clearTimeout(tapTimer);
   tapTimer = setTimeout(() => { tapCount = 0; }, 1500);
   if (tapCount >= 5) {
     tapCount = 0;
-    const box = document.getElementById("secretBox");
-    box.style.display = "flex";
+    document.getElementById("secretBox").style.display = "flex";
     document.getElementById("secretInput").focus();
   }
 }
-
 function checkSecret() {
   const val = document.getElementById("secretInput").value.trim().toLowerCase();
-  const id = SECRET_CODES[val] || 32;
-  btn(id);
+  btn(SECRET_CODES[val] || 32);
   document.getElementById("secretInput").value = "";
   document.getElementById("secretBox").style.display = "none";
 }
+document.getElementById("secretInput").addEventListener("keydown", e => { if (e.key === "Enter") checkSecret(); });
 
-document.getElementById("secretInput").addEventListener("keydown", function(e) {
-  if (e.key === "Enter") checkSecret();
-});
-
-// --- مسابقه‌ی فیلم/بازی (OpenTDB) + جدول امتیازات (Adafruit IO از طریق Worker) ---
-const LB_URL = "https://leaderboard-proxy.kdkdke126.workers.dev";
-let quizQuestions = [];
-let quizIndex = 0;
-let quizScore = 0;
-
-function decodeHTML(html) {
-  const txt = document.createElement("textarea");
-  txt.innerHTML = html;
-  return txt.value;
-}
-
-async function startQuiz() {
+const QUIZ_BANK = [
+  { q: "پایتخت ایران کدوم شهره؟", correct: "تهران", wrong: ["اصفهان", "شیراز", "مشهد"] },
+  { q: "بلندترین قله‌ی ایران کدومه؟", correct: "دماوند", wrong: ["سبلان", "علم‌کوه", "زردکوه"] },
+  { q: "فیلم «Inception» رو کدوم کارگردان ساخته؟", correct: "کریستوفر نولان", wrong: ["استیون اسپیلبرگ", "جیمز کامرون", "دیوید فینچر"] },
+  { q: "در ماینکرفت، برای ساخت TNT به چی نیاز داریم؟", correct: "باروت", wrong: ["آهن", "چوب", "الماس"] },
+  { q: "کدوم سیاره به «سیاره‌ی سرخ» معروفه؟", correct: "مریخ", wrong: ["زهره", "مشتری", "زحل"] },
+  { q: "شرکت سازنده‌ی پلی‌استیشن کدومه؟", correct: "سونی", wrong: ["مایکروسافت", "نینتندو", "سگا"] },
+  { q: "بزرگترین اقیانوس دنیا کدومه؟", correct: "اقیانوس آرام", wrong: ["اقیانوس اطلس", "اقیانوس هند", "اقیانوس منجمد شمالی"] },
+  { q: "نویسنده‌ی رمان «هری پاتر» کیه؟", correct: "جی. کی. رولینگ", wrong: ["جی. آر. آر. تالکین", "استیون کینگ", "سوزان کالینز"] },
+  { q: "کدوم فلز در دمای اتاق مایعه؟", correct: "جیوه", wrong: ["آهن", "طلا", "مس"] },
+  { q: "موتور بازی «مانیت کرافت» ساده‌ست یا نه، ولی این سوال درباره‌ی «فورتنایت» چیه: سازنده‌ش کیه؟", correct: "اپیک گیمز", wrong: ["اکتیویژن", "یوبیسافت", "والو"] }
+];
+let quizQuestions = [], quizIndex = 0, quizScore = 0;
+function shuffleArr(a){ return a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(v=>v[1]); }
+function startQuiz() {
   document.getElementById("leaderboardBox").style.display = "none";
-  const box = document.getElementById("quizBox");
-  box.style.display = "block";
-  document.getElementById("quizProgress").innerText = "";
-  document.getElementById("quizQuestion").innerText = "در حال دریافت سوال...";
-  document.getElementById("quizOptions").innerHTML = "";
-
-  const cat = Math.random() < 0.5 ? 11 : 15;
-  try {
-    const resp = await fetch(`https://opentdb.com/api.php?amount=5&category=${cat}&type=multiple`);
-    const data = await resp.json();
-    if (!data.results || !data.results.length) throw new Error("no questions");
-    quizQuestions = data.results;
-    quizIndex = 0;
-    quizScore = 0;
-    showQuizQuestion();
-  } catch (e) {
-    document.getElementById("quizQuestion").innerText = "اتصال به سوال‌ها برقرار نشد، دوباره امتحان کن";
-  }
+  document.getElementById("quizBox").style.display = "block";
+  quizQuestions = shuffleArr(QUIZ_BANK).slice(0, 5);
+  quizIndex = 0; quizScore = 0;
+  showQuizQuestion();
 }
-
 function showQuizQuestion() {
-  if (quizIndex >= quizQuestions.length) {
-    finishQuiz();
-    return;
-  }
+  if (quizIndex >= quizQuestions.length) { finishQuiz(); return; }
   const q = quizQuestions[quizIndex];
-  document.getElementById("quizProgress").innerText =
-    `سوال ${quizIndex + 1} از ${quizQuestions.length} — امتیاز: ${quizScore}`;
-  document.getElementById("quizQuestion").innerText = decodeHTML(q.question);
-
-  const correct = decodeHTML(q.correct_answer);
-  const options = [...q.incorrect_answers.map(decodeHTML), correct];
-  options.sort(() => Math.random() - 0.5);
-
+  document.getElementById("quizProgress").innerText = `سوال ${quizIndex + 1} از ${quizQuestions.length} — امتیاز: ${quizScore}`;
+  document.getElementById("quizQuestion").innerText = q.q;
+  const options = shuffleArr([q.correct, ...q.wrong]);
   const optBox = document.getElementById("quizOptions");
   optBox.innerHTML = "";
   options.forEach(opt => {
     const b = document.createElement("button");
     b.innerText = opt;
-    b.onclick = () => answerQuiz(opt, correct);
+    b.onclick = () => answerQuiz(b, opt, q.correct, optBox);
     optBox.appendChild(b);
   });
 }
-
-function answerQuiz(picked, correct) {
-  if (picked === correct) { quizScore++; btn(25); } else { btn(26); }
+function answerQuiz(btnEl, picked, correct, optBox) {
+  [...optBox.children].forEach(b => b.disabled = true);
+  if (picked === correct) { quizScore++; btn(25); btnEl.classList.add("correct"); }
+  else { btn(26); btnEl.classList.add("wrong"); [...optBox.children].forEach(b => { if (b.innerText === correct) b.classList.add("correct"); }); }
   quizIndex++;
-  setTimeout(showQuizQuestion, 700);
+  setTimeout(showQuizQuestion, 900);
 }
-
 async function finishQuiz() {
-  document.getElementById("quizQuestion").innerText =
-    `تموم شد! امتیازت: ${quizScore} از ${quizQuestions.length}`;
+  document.getElementById("quizQuestion").innerText = `تموم شد! امتیازت: ${quizScore} از ${quizQuestions.length}`;
   document.getElementById("quizOptions").innerHTML = "";
   document.getElementById("quizProgress").innerText = "";
-
   const name = prompt("اسمت رو برای جدول امتیازات بنویس:");
   if (name && name.trim()) {
-    try {
-      await fetch(LB_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feed: "leaderboard", value: name.trim() + "|" + quizScore })
-      });
-    } catch (e) {}
+    try { await fetch(LB_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feed: "leaderboard", value: name.trim() + "|" + quizScore }) }); } catch (e) {}
   }
 }
-
 async function showLeaderboard() {
   document.getElementById("quizBox").style.display = "none";
   const box = document.getElementById("leaderboardBox");
@@ -360,18 +411,68 @@ async function showLeaderboard() {
   try {
     const resp = await fetch(`${LB_URL}?feed=leaderboard&limit=50`);
     const data = await resp.json();
-    const rows = data.map(d => {
-      const parts = (d.value || "").split("|");
-      return { name: parts[0] || "؟", score: parseInt(parts[1]) || 0 };
-    });
+    const rows = data.map(d => { const p = (d.value || "").split("|"); return { name: p[0] || "؟", score: parseInt(p[1]) || 0 }; });
     rows.sort((a, b) => b.score - a.score);
     const top = rows.slice(0, 10);
-    box.innerHTML = top.length
-      ? top.map((r, i) => `<div class="lbRow">${i + 1}. ${r.name} — ${r.score} امتیاز</div>`).join("")
-      : "هنوز امتیازی ثبت نشده";
-  } catch (e) {
-    box.innerHTML = "خطا در دریافت جدول امتیازات";
-  }
+    box.innerHTML = top.length ? top.map((r, i) => `<div class="lbRow">${i + 1}. ${r.name} — ${r.score} امتیاز</div>`).join("") : "هنوز امتیازی ثبت نشده";
+  } catch (e) { box.innerHTML = "خطا در دریافت جدول امتیازات"; }
+}
+
+const PERSIAN_MONTHS = ["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
+function gregorianToJalali(gy, gm, gd) {
+  const g_d_m = [0,31,59,90,120,151,181,212,243,273,304,334];
+  let jy = (gy <= 1600) ? 0 : 979;
+  gy -= (gy <= 1600) ? 621 : 1600;
+  const gy2 = (gm > 2) ? (gy + 1) : gy;
+  let days = (365*gy) + Math.floor((gy2+3)/4) - Math.floor((gy2+99)/100) + Math.floor((gy2+399)/400) - 80 + gd + g_d_m[gm-1];
+  jy += 33*Math.floor(days/12053); days %= 12053;
+  jy += 4*Math.floor(days/1461); days %= 1461;
+  if (days > 365) { jy += Math.floor((days-1)/365); days = (days-1)%365; }
+  const jm = (days < 186) ? 1 + Math.floor(days/31) : 7 + Math.floor((days-186)/30);
+  const jd = 1 + ((days < 186) ? (days%31) : ((days-186)%30));
+  return [jy, jm, jd];
+}
+function jalaliToGregorian(jy, jm, jd) {
+  let gy = (jy <= 979) ? 621 : 1600;
+  jy -= (jy <= 979) ? 0 : 979;
+  let days = 365*jy + Math.floor(jy/33)*8 + Math.floor(((jy%33)+3)/4) + 78 + jd + ((jm<7)?(jm-1)*31:((jm-7)*30+186));
+  gy += 400*Math.floor(days/146097); days %= 146097;
+  let leap = true;
+  if (days > 36524) { days--; gy += 100*Math.floor(days/36524); days %= 36524; if (days >= 365) days++; else leap=false; }
+  gy += 4*Math.floor(days/1461); days %= 1461;
+  if (days > 365) { gy += Math.floor((days-1)/365); days = (days-1)%365; }
+  const sal_a = [0,31,(((gy%4===0)&&(gy%100!==0))||(gy%400===0))?29:28,31,30,31,30,31,31,30,31,30,31];
+  let gd = days + 1; let gm = 0;
+  for (gm=0; gm<13; gm++) { const v = sal_a[gm]; if (gd <= v) break; gd -= v; }
+  return [gy, gm, gd];
+}
+function todayJalali() { const t = new Date(); return gregorianToJalali(t.getFullYear(), t.getMonth()+1, t.getDate()); }
+function fillJalaliSelects(dayId, monthId, yearId) {
+  const daySel = document.getElementById(dayId), monthSel = document.getElementById(monthId), yearSel = document.getElementById(yearId);
+  daySel.innerHTML = ""; monthSel.innerHTML = ""; yearSel.innerHTML = "";
+  for (let d=1; d<=31; d++) daySel.innerHTML += `<option value="${d}">${d}</option>`;
+  PERSIAN_MONTHS.forEach((m,i) => monthSel.innerHTML += `<option value="${i+1}">${m}</option>`);
+  const [jy] = todayJalali();
+  for (let y=jy; y<=jy+10; y++) yearSel.innerHTML += `<option value="${y}">${y}</option>`;
+  const [, tm, td] = todayJalali();
+  daySel.value = td; monthSel.value = tm; yearSel.value = jy;
+}
+fillJalaliSelects("pcDay","pcMonth","pcYear");
+fillJalaliSelects("fmDay","fmMonth","fmYear");
+
+async function saveWifiConfig() {
+  const ssid = document.getElementById("wifiSsid").value.trim();
+  const pass = document.getElementById("wifiPass").value.trim();
+  const statusEl = document.getElementById("wifiStatus");
+  const spinEl = document.getElementById("wifiSpinner");
+  if (!ssid) { statusEl.innerText = "اسم وای‌فای رو بنویس"; return; }
+  spinEl.classList.add("show");
+  statusEl.innerText = "در حال ارسال به دستگاه...";
+  try {
+    await fetch(LB_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feed: "wifi_config", value: ssid + "|" + pass }) });
+    statusEl.innerText = "ارسال شد ✅ دستگاه تلاش می‌کنه وصل بشه";
+  } catch (e) { statusEl.innerText = "خطا در ارسال"; }
+  spinEl.classList.remove("show");
 }
 
 function nowruzCountdown() {
@@ -379,52 +480,35 @@ function nowruzCountdown() {
   let year = now.getFullYear();
   let target = new Date(year, 2, 21, 0, 0, 0);
   if (now >= target) target = new Date(year + 1, 2, 21, 0, 0, 0);
-  const days = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+  const days = Math.ceil((target - now) / 86400000);
   document.getElementById("nowruzBox").innerText = `🌱 ${days} روز تا نوروز مونده`;
 }
-
-const FORTUNES = [
-  "امروز روز خوبیه برای شروع یه کار جدید.",
-  "یه نفس عمیق بکش، همه‌چی درست می‌شه.",
-  "امروز حواست به خودت هم باشه، نه فقط کارها.",
-  "یه قدم کوچیک هم جلو رفتنه.",
-  "امروز به یکی که دوستش داری پیام بده.",
-  "استراحت کردن هم بخشی از پیشرفته.",
-  "امروز یه چیز جدید یاد بگیر، هرچقدر کوچیک.",
-  "به خودت سخت نگیر، داری خوب پیش می‌ری.",
-  "امروز یکی از کارهای عقب‌افتاده رو تموم کن.",
-  "یادت باشه آب بخوری امروز 😄",
-  "امروز یه لبخند به یکی هدیه بده.",
-  "کارهای بزرگ از کارهای کوچیک شروع می‌شن.",
-  "امروز رو با انرژی مثبت شروع کن.",
-  "یه‌کم به آینده‌ت فکر کن، ولی امروز رو زندگی کن.",
-  "امروز حتماً یه استراحت کوتاه بین کارها بذار."
-];
+const FORTUNES = ["امروز روز خوبیه برای شروع یه کار جدید.","یه نفس عمیق بکش، همه‌چی درست می‌شه.","امروز حواست به خودت هم باشه.","یه قدم کوچیک هم جلو رفتنه.","امروز به یکی که دوستش داری پیام بده.","استراحت کردن هم بخشی از پیشرفته.","امروز یه چیز جدید یاد بگیر.","به خودت سخت نگیر.","امروز یکی از کارهای عقب‌افتاده رو تموم کن.","یادت باشه آب بخوری امروز 😄","امروز یه لبخند به یکی هدیه بده.","کارهای بزرگ از کارهای کوچیک شروع می‌شن.","امروز رو با انرژی مثبت شروع کن.","یه‌کم به آینده‌ت فکر کن، ولی امروز رو زندگی کن.","امروز یه استراحت کوتاه بین کارها بذار."];
 function dailyFortune() {
   const todayKey = new Date().toISOString().slice(0, 10);
   let idx = 0;
   for (let i = 0; i < todayKey.length; i++) idx += todayKey.charCodeAt(i);
-  idx = idx % FORTUNES.length;
-  document.getElementById("fortuneBox").innerText = "🔮 فال امروز: " + FORTUNES[idx];
+  document.getElementById("fortuneBox").innerText = "🔮 فال امروز: " + FORTUNES[idx % FORTUNES.length];
 }
 
 function savePersonalCountdown() {
   const label = document.getElementById("pcLabel").value.trim();
-  const date = document.getElementById("pcDate").value;
-  if (!label || !date) return;
-  localStorage.setItem("personalCountdown", JSON.stringify({ label, date }));
+  const jy = parseInt(document.getElementById("pcYear").value);
+  const jm = parseInt(document.getElementById("pcMonth").value);
+  const jd = parseInt(document.getElementById("pcDay").value);
+  if (!label) return;
+  const [gy, gm, gd] = jalaliToGregorian(jy, jm, jd);
+  localStorage.setItem("personalCountdown", JSON.stringify({ label, gy, gm, gd, jy, jm, jd }));
   document.getElementById("pcLabel").value = "";
-  document.getElementById("pcDate").value = "";
   renderPersonalCountdown();
 }
 function renderPersonalCountdown() {
   const raw = localStorage.getItem("personalCountdown");
   const box = document.getElementById("pcResult");
   if (!raw) { box.innerText = ""; return; }
-  const { label, date } = JSON.parse(raw);
-  const target = new Date(date);
-  const now = new Date();
-  const diffDays = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+  const d = JSON.parse(raw);
+  const target = new Date(d.gy, d.gm - 1, d.gd);
+  const diffDays = Math.ceil((target - new Date()) / 86400000);
   let mood;
   if (diffDays < 0) mood = "گذشت! 😅";
   else if (diffDays === 0) mood = "همین امروزه! 😱";
@@ -432,7 +516,7 @@ function renderPersonalCountdown() {
   else if (diffDays <= 7) mood = "داره نزدیک می‌شه‌ها 😬";
   else if (diffDays <= 30) mood = "یه‌کم وقت داری، ولی غافل نشو 🙂";
   else mood = "خیالت راحت باشه، وقت زیاده 😌";
-  box.innerText = `${label}: ${diffDays} روز مونده — ${mood}`;
+  box.innerText = `${d.label} (${d.jy}/${d.jm}/${d.jd}): ${diffDays} روز مونده — ${mood}`;
 }
 
 let timerHandle = null;
@@ -441,34 +525,32 @@ function startTimer() {
   const label = document.getElementById("timerLabel").value.trim() || "یادآوری";
   if (!mins || mins <= 0) return;
   if (timerHandle) clearTimeout(timerHandle);
-  document.getElementById("timerStatus").innerText =
-    `⏳ تایمر «${label}» برای ${mins} دقیقه‌ی دیگه فعال شد (تا وقتی این صفحه بازه)`;
+  document.getElementById("timerStatus").innerText = `⏳ تایمر «${label}» برای ${mins} دقیقه‌ی دیگه فعال شد`;
   timerHandle = setTimeout(() => {
     document.getElementById("timerStatus").innerText = `⏰ ${label}`;
     alert("⏰ " + label);
-  }, mins * 60 * 1000);
+  }, mins * 60000);
+  // به فید دستگاه هم می‌فرستیم؛ سمت WeMos هنوز باید بخوندش و اقدام کنه
+  const dueAt = Date.now() + mins * 60000;
+  fetch(LB_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feed: "reminder", value: dueAt + "|" + label }) }).catch(()=>{});
 }
 
 async function saveFutureMsg() {
   const text = document.getElementById("fmText").value.trim();
-  const date = document.getElementById("fmDate").value;
+  const jy = parseInt(document.getElementById("fmYear").value);
+  const jm = parseInt(document.getElementById("fmMonth").value);
+  const jd = parseInt(document.getElementById("fmDay").value);
   const status = document.getElementById("fmStatus");
-  if (!text || !date) return;
+  if (!text) return;
+  const [gy, gm, gd] = jalaliToGregorian(jy, jm, jd);
+  const dateStr = `${gy}-${String(gm).padStart(2,"0")}-${String(gd).padStart(2,"0")}`;
   status.innerText = "در حال ذخیره...";
   try {
-    await fetch(LB_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ feed: "futuremsg", value: date + "|" + text })
-    });
+    await fetch(LB_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feed: "futuremsg", value: dateStr + "|" + text }) });
     document.getElementById("fmText").value = "";
-    document.getElementById("fmDate").value = "";
-    status.innerText = "ذخیره شد ✅ همون تاریخ که سایت رو باز کنی نشونت می‌دم.";
-  } catch (e) {
-    status.innerText = "خطا در ذخیره‌سازی";
-  }
+    status.innerText = "ذخیره شد ✅";
+  } catch (e) { status.innerText = "خطا در ذخیره‌سازی"; }
 }
-
 async function checkFutureMsg() {
   try {
     const resp = await fetch(`${LB_URL}?feed=futuremsg&limit=1`);
@@ -476,29 +558,18 @@ async function checkFutureMsg() {
     if (!data.length) return;
     const [dateStr, ...rest] = data[0].value.split("|");
     const text = rest.join("|");
-    const target = new Date(dateStr);
-    const now = new Date();
     const shownKey = "futuremsgShown_" + dateStr;
-    if (now >= target && !localStorage.getItem(shownKey)) {
+    if (new Date() >= new Date(dateStr) && !localStorage.getItem(shownKey)) {
       localStorage.setItem(shownKey, "1");
       setTimeout(() => alert("💌 پیام از گذشته:\n\n" + text), 500);
     }
   } catch (e) {}
 }
 
-nowruzCountdown();
-dailyFortune();
-renderPersonalCountdown();
-checkFutureMsg();
+nowruzCountdown(); dailyFortune(); renderPersonalCountdown(); checkFutureMsg();
 
-// --- سوییچ پخش صدای هوش مصنوعی از بلندگوی دستگاه ---
-function saveSpeakToggle() {
-  const on = document.getElementById("speakToggle").checked;
-  localStorage.setItem("aiSpeakEnabled", on ? "1" : "0");
-}
-if (localStorage.getItem("aiSpeakEnabled") === "1") {
-  document.getElementById("speakToggle").checked = true;
-}
+function saveSpeakToggle() { localStorage.setItem("aiSpeakEnabled", document.getElementById("speakToggle").checked ? "1" : "0"); }
+if (localStorage.getItem("aiSpeakEnabled") === "1") document.getElementById("speakToggle").checked = true;
 
 function addMsg(text, who) {
   const box = document.getElementById("chatBox");
@@ -508,92 +579,35 @@ function addMsg(text, who) {
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
-
 function sendChat() {
   const input = document.getElementById("chatInput");
   const text = input.value.trim();
   if (!text) return;
-  addMsg(text, "user");
-  input.value = "";
-  addMsg("...", "ai");
-
+  addMsg(text, "user"); input.value = ""; addMsg("...", "ai");
   const speakOn = document.getElementById("speakToggle").checked;
-
-  fetch(AI_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: text, speak: speakOn })
-  })
-  .then(r => r.json())
-  .then(data => {
-    const box = document.getElementById("chatBox");
-    box.removeChild(box.lastChild);
-    addMsg(data.answer || "جوابی نیومد", "ai");
-  })
-  .catch(() => {
-    const box = document.getElementById("chatBox");
-    box.removeChild(box.lastChild);
-    addMsg("اتصال برقرار نشد", "ai");
-  });
+  fetch(AI_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, speak: speakOn }) })
+    .then(r => r.json()).then(data => { const box = document.getElementById("chatBox"); box.removeChild(box.lastChild); addMsg(data.answer || "جوابی نیومد", "ai"); })
+    .catch(() => { const box = document.getElementById("chatBox"); box.removeChild(box.lastChild); addMsg("اتصال برقرار نشد", "ai"); });
 }
+document.getElementById("chatInput").addEventListener("keydown", e => { if (e.key === "Enter") sendChat(); });
 
-document.getElementById("chatInput").addEventListener("keydown", function(e) {
-  if (e.key === "Enter") sendChat();
-});
-
-// --- میکروفون (Web Speech API فارسی) ---
-let recognition = null;
-let isListening = false;
-
+let recognition = null, isListening = false;
 function initRecognition() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) return null;
-  const r = new SpeechRecognition();
-  r.lang = "fa-IR";
-  r.continuous = false;
-  r.interimResults = false;
-  r.maxAlternatives = 1;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  const r = new SR(); r.lang = "fa-IR"; r.continuous = false; r.interimResults = false; r.maxAlternatives = 1;
   return r;
 }
-
 function toggleMic() {
-  if (isListening) {
-    if (recognition) recognition.stop();
-    return;
-  }
-
+  if (isListening) { if (recognition) recognition.stop(); return; }
   if (!recognition) recognition = initRecognition();
-  if (!recognition) {
-    alert("متاسفانه مرورگرت از تشخیص صدا پشتیبانی نمی‌کنه");
-    return;
-  }
-
+  if (!recognition) { alert("متاسفانه مرورگرت از تشخیص صدا پشتیبانی نمی‌کنه"); return; }
   isListening = true;
   document.getElementById("micBtn").classList.add("listening");
-
-  recognition.onresult = function(event) {
-    const transcript = event.results[0][0].transcript;
-    document.getElementById("chatInput").value = transcript;
-    sendChat();
-  };
-
-  recognition.onerror = function(event) {
-    console.error("خطای تشخیص صدا:", event.error);
-    isListening = false;
-    document.getElementById("micBtn").classList.remove("listening");
-  };
-
-  recognition.onend = function() {
-    isListening = false;
-    document.getElementById("micBtn").classList.remove("listening");
-  };
-
-  try {
-    recognition.start();
-  } catch (e) {
-    isListening = false;
-    document.getElementById("micBtn").classList.remove("listening");
-  }
+  recognition.onresult = e => { document.getElementById("chatInput").value = e.results[0][0].transcript; sendChat(); };
+  recognition.onerror = () => { isListening = false; document.getElementById("micBtn").classList.remove("listening"); };
+  recognition.onend = () => { isListening = false; document.getElementById("micBtn").classList.remove("listening"); };
+  try { recognition.start(); } catch (e) { isListening = false; document.getElementById("micBtn").classList.remove("listening"); }
 }
 </script>
 </body>
