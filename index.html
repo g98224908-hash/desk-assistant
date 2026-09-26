@@ -665,25 +665,39 @@ function sendChat() {
   if (!text) return;
   addMsg(text, "user");
   input.value = "";
-  addMsg("...", "ai");
+  addMsg("رکس در حال فکر کردنه...", "ai");
 
   const speakOn = document.getElementById("speakToggle").checked;
+
+  const thinkingMsgs = ["رکس در حال فکر کردنه...", "چند لحظه صبر کن...", "هنوز رو جوابشم...", "داره جواب میاد، صبر کن..."];
+  let thinkingIdx = 0;
+  const thinkingInterval = setInterval(() => {
+    thinkingIdx = (thinkingIdx + 1) % thinkingMsgs.length;
+    const box = document.getElementById("chatBox");
+    if (box.lastChild) box.lastChild.innerText = thinkingMsgs[thinkingIdx];
+  }, 4000);
+
+  const ctrl = new AbortController();
+  const killer = setTimeout(() => ctrl.abort(), 40000);
 
   fetch(AI_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: text, speak: speakOn })
+    body: JSON.stringify({ text: text, speak: speakOn }),
+    signal: ctrl.signal
   })
   .then(r => r.json())
   .then(data => {
+    clearTimeout(killer); clearInterval(thinkingInterval);
     const box = document.getElementById("chatBox");
     box.removeChild(box.lastChild);
     addMsg(data.answer || "جوابی نیومد", "ai");
   })
   .catch(() => {
+    clearTimeout(killer); clearInterval(thinkingInterval);
     const box = document.getElementById("chatBox");
     box.removeChild(box.lastChild);
-    addMsg("اتصال برقرار نشد", "ai");
+    addMsg("اتصال با هوش مصنوعی برقرار نشد، دوباره امتحان کن", "ai");
   });
 }
 
