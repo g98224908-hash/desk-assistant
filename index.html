@@ -6,7 +6,8 @@
 <title>دستیار رومیزی</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
   :root{
     --bg1:#070a12; --bg2:#0d1526;
@@ -42,7 +43,7 @@
 
   body{
     margin:0; padding:18px 14px 48px;
-    font-family:'Vazirmatn', sans-serif;
+    font-family:'Vazirmatn', Tahoma, system-ui, sans-serif;
     color:var(--text);
     background:linear-gradient(180deg, var(--bg1), var(--bg2));
     min-height:100vh;
@@ -242,6 +243,11 @@
 
   .wifiBox{ background:var(--card2); border:1px solid var(--line); border-radius:14px; padding:14px; text-align:right; }
   .wifiNote{ font-size:12px; color:var(--muted); margin-top:8px; line-height:1.8; }
+
+  button:disabled{ opacity:.6; cursor:not-allowed; transform:none; }
+  button:disabled:hover{ transform:none; }
+  #quizOptions button.correct{ background:linear-gradient(135deg,#1f9d5c,#3ddc84); color:#04210f; border-color:transparent; opacity:1; }
+  #quizOptions button.wrong{ background:linear-gradient(135deg,#c0392b,#ff6b6b); color:#2a0505; border-color:transparent; opacity:1; }
 </style>
 </head>
 <body>
@@ -391,52 +397,81 @@
 const PROXY_URL = "https://desk-assistant-proxy.kdkdke126.workers.dev";
 const AI_URL = "https://desk-assistant-ai.kdkdke126.workers.dev";
 const LB_URL = "https://leaderboard-proxy.kdkdke126.workers.dev";
-const SITE_PASSWORD = "Mm17881788@";
+const PASS_HASH = "23472c934f31bb55032f12dd758d6b198014f6eeb2af34389603494e618a186d";
 
-function checkPass() {
-  const val = document.getElementById("passInput").value;
-  if (val === SITE_PASSWORD) {
-    localStorage.setItem("deskAssistantUnlocked", "1");
-    document.getElementById("lockScreen").style.display = "none";
-    document.getElementById("appContent").style.display = "block";
-  } else {
-    document.getElementById("lockError").innerText = "رمز اشتباهه";
-  }
+/* ---------- کمکی‌ها ---------- */
+function $(id){ return document.getElementById(id); }
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+function pad2(n){ return String(n).padStart(2,"0"); }
+function cleanField(s){ return String(s).replace(/[|\r\n]+/g," ").trim(); }
+function hash32(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))|0; } return (h>>>0).toString(36); }
+async function sha256Hex(s){
+  const buf=await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
-document.getElementById("passInput").addEventListener("keydown", e => { if (e.key === "Enter") checkPass(); });
-if (localStorage.getItem("deskAssistantUnlocked") === "1") {
-  document.getElementById("lockScreen").style.display = "none";
-  document.getElementById("appContent").style.display = "block";
+function dayNumber(d){ return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())/86400000); }
+function daysUntil(target){ return dayNumber(target)-dayNumber(new Date()); }
+async function postFeed(feed, value){
+  const r=await fetch(LB_URL, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({feed, value}) });
+  if(!r.ok) throw new Error("bad-status");
 }
 
-function btn(id) {
-  const toast = document.getElementById("toast");
-  toast.innerText = "در حال ارسال...";
-  showToast();
-  const ctrl = new AbortController();
-  const killer = setTimeout(() => ctrl.abort(), 7000);
-  fetch(PROXY_URL + "/?id=" + id, { signal: ctrl.signal })
-    .then(r => r.text())
-    .then(t => { clearTimeout(killer); toast.innerText = t; showToast(); })
-    .catch(() => { clearTimeout(killer); toast.innerText = "اتصال برقرار نشد، دوباره امتحان کن"; showToast(); });
+/* ---------- قفل ---------- */
+function showApp(){ $("lockScreen").style.display="none"; $("appContent").style.display="block"; }
+async function checkPass(){
+  const val=$("passInput").value;
+  if(!(window.crypto && crypto.subtle)){ $("lockError").innerText="این صفحه باید با https باز بشه"; return; }
+  const h=await sha256Hex(val);
+  if(h===PASS_HASH){ lsSet("deskAssistantUnlocked", PASS_HASH); showApp(); }
+  else { $("lockError").innerText="رمز اشتباهه"; }
 }
-function showToast() {
-  const t = document.getElementById("toast");
+$("passInput").addEventListener("keydown", e => { if (e.key === "Enter") checkPass(); });
+if (lsGet("deskAssistantUnlocked") === PASS_HASH) showApp();
+
+/* ---------- دکمه‌ها ---------- */
+let toastTimer=null;
+function showToast(){
+  const t=$("toast");
   t.classList.remove("show");
   void t.offsetWidth;
   t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 1400);
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove("show"), 1400);
+}
+function btn(id){
+  const toast=$("toast");
+  toast.innerText="در حال ارسال...";
+  showToast();
+  const ctrl=new AbortController();
+  const killer=setTimeout(()=>ctrl.abort(), 7000);
+  return fetch(PROXY_URL+"/?id="+encodeURIComponent(id), { signal: ctrl.signal })
+    .then(r=>r.text().then(t=>({ok:r.ok, t})))
+    .then(({ok,t})=>{
+      clearTimeout(killer);
+      toast.innerText = ok ? (t.slice(0,60) || "ارسال شد") : "خطا از سمت سرور، دوباره امتحان کن";
+      showToast();
+      return ok;
+    })
+    .catch(()=>{
+      clearTimeout(killer);
+      toast.innerText="اتصال برقرار نشد، دوباره امتحان کن";
+      showToast();
+      return false;
+    });
 }
 
 function setVolume(level) {
-  const lvl = Math.max(1, Math.min(100, parseInt(level)));
+  const lvl = Math.max(1, Math.min(100, parseInt(level)||50));
   btn(100 + lvl);
 }
 
 function setParty(on) {
-  btn(on ? 23 : 24);
-  document.getElementById("partyOnBtn").classList.toggle("active", on);
-  document.getElementById("partyOffBtn").classList.toggle("active", !on);
+  btn(on ? 23 : 24).then(ok=>{
+    if(!ok) return;
+    $("partyOnBtn").classList.toggle("active", on);
+    $("partyOffBtn").classList.toggle("active", !on);
+  });
 }
 
 const SECRET_CODES = { "konami": 30, "mohandes": 31 };
@@ -447,113 +482,146 @@ function titleTap() {
   tapTimer = setTimeout(() => { tapCount = 0; }, 1500);
   if (tapCount >= 5) {
     tapCount = 0;
-    const box = document.getElementById("secretBox");
-    box.style.display = "flex";
-    document.getElementById("secretInput").focus();
+    $("secretBox").style.display = "flex";
+    $("secretInput").focus();
   }
 }
 function checkSecret() {
-  const val = document.getElementById("secretInput").value.trim().toLowerCase();
-  const id = SECRET_CODES[val] || 32;
+  const val = $("secretInput").value.trim().toLowerCase();
+  const id = Object.prototype.hasOwnProperty.call(SECRET_CODES, val) ? SECRET_CODES[val] : 32;
   btn(id);
-  document.getElementById("secretInput").value = "";
-  document.getElementById("secretBox").style.display = "none";
+  $("secretInput").value = "";
+  $("secretBox").style.display = "none";
 }
-document.getElementById("secretInput").addEventListener("keydown", e => { if (e.key === "Enter") checkSecret(); });
+$("secretInput").addEventListener("keydown", e => { if (e.key === "Enter") checkSecret(); });
 
+/* ---------- وای‌فای ---------- */
 async function sendWifiConfig() {
-  const ssid = document.getElementById("wifiSsid").value.trim();
-  const pass = document.getElementById("wifiPass").value.trim();
-  const status = document.getElementById("wifiStatus");
+  const ssid = $("wifiSsid").value.trim();
+  const pass = $("wifiPass").value;
+  const status = $("wifiStatus");
   if (!ssid) { status.innerText = "اسم وای‌فای رو بنویس"; return; }
+  if (ssid.length > 32) { status.innerText = "اسم وای‌فای حداکثر ۳۲ کاراکتر می‌تونه باشه"; return; }
+  if (ssid.indexOf("|") !== -1) { status.innerText = "اسم وای‌فای نباید علامت | داشته باشه"; return; }
+  if (pass.length !== 0 && (pass.length < 8 || pass.length > 63)) { status.innerText = "رمز وای‌فای باید بین ۸ تا ۶۳ کاراکتر باشه (یا برای شبکه‌ی بدون رمز خالی بمونه)"; return; }
   status.innerText = "در حال ارسال به دستگاه...";
   try {
-    await fetch(LB_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ feed: "wifi_config", value: ssid + "|" + pass })
-    });
+    await postFeed("wifi_config", ssid + "|" + pass);
+    $("wifiPass").value = "";
     status.innerText = "فرستاده شد ✅ دستگاه توی چرخه‌ی بعدیش امتحان می‌کنه وصل بشه.";
   } catch (e) {
-    status.innerText = "خطا در ارسال";
+    status.innerText = "خطا در ارسال ❌";
   }
 }
 
+/* ---------- مسابقه ---------- */
 const QUIZ_BANK = [
   {q:"پایتخت ایران کدام شهر است؟", opts:["تهران","اصفهان","شیراز","مشهد"], a:"تهران"},
   {q:"بزرگ‌ترین سیاره منظومه شمسی کدام است؟", opts:["زمین","مشتری","زحل","مریخ"], a:"مشتری"},
   {q:"فردوسی سراینده کدام اثر معروف است؟", opts:["گلستان","شاهنامه","بوستان","مثنوی"], a:"شاهنامه"},
-  {q:"شیمیایی‌ترین عنصر هوا برای تنفس انسان کدام است؟", opts:["نیتروژن","اکسیژن","کربن","هیدروژن"], a:"اکسیژن"},
+  {q:"کدام گاز برای تنفس انسان ضروری است؟", opts:["نیتروژن","اکسیژن","کربن‌دی‌اکسید","هیدروژن"], a:"اکسیژن"},
   {q:"بلندترین قله ایران کدام است؟", opts:["سبلان","دماوند","علم‌کوه","زردکوه"], a:"دماوند"},
   {q:"سریع‌ترین حیوان خشکی جهان کدام است؟", opts:["شیر","یوزپلنگ","اسب","گورخر"], a:"یوزپلنگ"},
   {q:"واحد پول ژاپن چیست؟", opts:["یوان","وون","ین","روپیه"], a:"ین"},
-  {q:"آب از چند اتم تشکیل شده؟", opts:["۲","۳","۴","۱"], a:"۳"},
+  {q:"هر مولکول آب از چند اتم ساخته شده است؟", opts:["۲","۳","۴","۱"], a:"۳"},
   {q:"بزرگ‌ترین اقیانوس جهان کدام است؟", opts:["اطلس","هند","آرام","منجمد شمالی"], a:"آرام"},
   {q:"نخستین رئیس‌جمهور آمریکا چه کسی بود؟", opts:["لینکلن","واشینگتن","جفرسون","آدامز"], a:"واشینگتن"},
   {q:"کدام سیاره به «سیاره سرخ» معروف است؟", opts:["زهره","مریخ","عطارد","نپتون"], a:"مریخ"},
   {q:"قلب انسان چند حفره دارد؟", opts:["۲","۳","۴","۵"], a:"۴"},
-  {q:"طولانی‌ترین رودخانه جهان کدام است؟", opts:["آمازون","نیل","میسیسیپی","یانگ‌تسه"], a:"نیل"},
+  {q:"کوچک‌ترین سیاره منظومه شمسی کدام است؟", opts:["عطارد","زمین","نپتون","اورانوس"], a:"عطارد"},
   {q:"نماد شیمیایی طلا چیست؟", opts:["Ag","Au","Fe","Pb"], a:"Au"},
   {q:"جام جهانی فوتبال هر چند سال یک‌بار برگزار می‌شود؟", opts:["۲","۴","۵","۳"], a:"۴"}
 ];
-let quizQuestions = [], quizIndex = 0, quizScore = 0;
+let quizQuestions = [], quizIndex = 0, quizScore = 0, quizLocked = false, quizTimer = null;
 
-function shuffle(arr){ return arr.map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(v=>v[1]); }
+function shuffle(arr){
+  const a = arr.slice();
+  for (let i=a.length-1; i>0; i--) { const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; }
+  return a;
+}
 
 function startQuiz() {
-  document.getElementById("leaderboardBox").style.display = "none";
-  const box = document.getElementById("quizBox");
-  box.style.display = "block";
+  clearTimeout(quizTimer);
+  $("leaderboardBox").style.display = "none";
+  $("quizBox").style.display = "block";
   quizQuestions = shuffle(QUIZ_BANK).slice(0, 5);
-  quizIndex = 0; quizScore = 0;
+  quizIndex = 0; quizScore = 0; quizLocked = false;
   showQuizQuestion();
 }
 function showQuizQuestion() {
   if (quizIndex >= quizQuestions.length) { finishQuiz(); return; }
+  quizLocked = false;
   const q = quizQuestions[quizIndex];
-  document.getElementById("quizProgress").innerText = `سوال ${quizIndex+1} از ${quizQuestions.length} — امتیاز: ${quizScore}`;
-  document.getElementById("quizQuestion").innerText = q.q;
-  const optBox = document.getElementById("quizOptions");
+  $("quizProgress").innerText = `سوال ${quizIndex+1} از ${quizQuestions.length} — امتیاز: ${quizScore}`;
+  $("quizQuestion").innerText = q.q;
+  const optBox = $("quizOptions");
   optBox.innerHTML = "";
   shuffle(q.opts).forEach(opt => {
     const b = document.createElement("button");
     b.innerText = opt;
-    b.onclick = () => answerQuiz(opt, q.a);
+    b.dataset.opt = opt;
+    b.onclick = () => answerQuiz(b, opt, q.a);
     optBox.appendChild(b);
   });
 }
-function answerQuiz(picked, correct) {
-  if (picked === correct) { quizScore++; btn(25); } else { btn(26); }
+function answerQuiz(btnEl, picked, correct) {
+  if (quizLocked) return;
+  quizLocked = true;
+  const ok = picked === correct;
+  if (ok) quizScore++;
+  btn(ok ? 25 : 26);
+  document.querySelectorAll("#quizOptions button").forEach(b => {
+    b.disabled = true;
+    if (b.dataset.opt === correct) b.classList.add("correct");
+    else if (b === btnEl) b.classList.add("wrong");
+  });
   quizIndex++;
-  setTimeout(showQuizQuestion, 700);
+  quizTimer = setTimeout(showQuizQuestion, 900);
 }
 async function finishQuiz() {
-  document.getElementById("quizQuestion").innerText = `تموم شد! امتیازت: ${quizScore} از ${quizQuestions.length}`;
-  document.getElementById("quizOptions").innerHTML = "";
-  document.getElementById("quizProgress").innerText = "";
-  const name = prompt("اسمت رو برای جدول امتیازات بنویس:");
-  if (name && name.trim()) {
-    try {
-      await fetch(LB_URL, { method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ feed:"leaderboard", value: name.trim() + "|" + quizScore }) });
-    } catch (e) {}
+  $("quizQuestion").innerText = `تموم شد! امتیازت: ${quizScore} از ${quizQuestions.length}`;
+  $("quizOptions").innerHTML = "";
+  $("quizProgress").innerText = "";
+  const raw = prompt("اسمت رو برای جدول امتیازات بنویس:");
+  const name = raw ? cleanField(raw).slice(0, 20) : "";
+  if (name) {
+    try { await postFeed("leaderboard", name + "|" + quizScore); }
+    catch (e) { $("quizProgress").innerText = "امتیازت توی جدول ثبت نشد ❌"; }
   }
 }
 async function showLeaderboard() {
-  document.getElementById("quizBox").style.display = "none";
-  const box = document.getElementById("leaderboardBox");
+  clearTimeout(quizTimer);
+  $("quizBox").style.display = "none";
+  const box = $("leaderboardBox");
   box.style.display = "block";
-  box.innerHTML = "در حال بارگذاری...";
+  box.innerText = "در حال بارگذاری...";
   try {
     const resp = await fetch(`${LB_URL}?feed=leaderboard&limit=50`);
+    if (!resp.ok) throw new Error("bad-status");
     const data = await resp.json();
-    const rows = data.map(d => { const p=(d.value||"").split("|"); return {name:p[0]||"؟", score:parseInt(p[1])||0}; });
-    rows.sort((a,b)=>b.score-a.score);
-    const top = rows.slice(0,10);
-    box.innerHTML = top.length ? top.map((r,i)=>`<div class="lbRow">${i+1}. ${r.name} — ${r.score} امتیاز</div>`).join("") : "هنوز امتیازی ثبت نشده";
-  } catch (e) { box.innerHTML = "خطا در دریافت جدول امتیازات"; }
+    if (!Array.isArray(data)) throw new Error("bad-data");
+    const best = new Map();
+    data.forEach(d => {
+      const v = (d && typeof d.value === "string") ? d.value : "";
+      const i = v.lastIndexOf("|");
+      if (i < 0) return;
+      const name = v.slice(0, i).trim() || "؟";
+      const score = parseInt(v.slice(i+1)) || 0;
+      if (!best.has(name) || best.get(name) < score) best.set(name, score);
+    });
+    const top = Array.from(best, ([name, score]) => ({name, score})).sort((a,b)=>b.score-a.score).slice(0, 10);
+    box.innerHTML = "";
+    if (!top.length) { box.innerText = "هنوز امتیازی ثبت نشده"; return; }
+    top.forEach((r,i) => {
+      const row = document.createElement("div");
+      row.className = "lbRow";
+      row.textContent = `${i+1}. ${r.name} — ${r.score} امتیاز`;
+      box.appendChild(row);
+    });
+  } catch (e) { box.innerText = "خطا در دریافت جدول امتیازات"; }
 }
 
+/* ---------- تقویم جلالی (بدون تغییر) ---------- */
 function div(a,b){ return ~~(a/b); }
 function mod(a,b){ return a - ~~(a/b)*b; }
 function jalCal(jy){
@@ -601,7 +669,7 @@ function isLeapJalaaliYear(jy){ return jalCal(jy).leap===0; }
 const JMONTHS = ["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
 
 function buildJalaliPicker(containerId, yearsAhead){
-  const box = document.getElementById(containerId);
+  const box = $(containerId);
   const today = new Date();
   const jt = toJalaali(today.getFullYear(), today.getMonth()+1, today.getDate());
   box.innerHTML = `
@@ -617,7 +685,7 @@ function buildJalaliPicker(containerId, yearsAhead){
   function refreshDays(){
     const jy = parseInt(yearSel.value), jm = parseInt(monthSel.value);
     const maxDay = jm<=6 ? 31 : (jm<=11 ? 30 : (isLeapJalaaliYear(jy) ? 30 : 29));
-    const cur = daySel.value;
+    const cur = parseInt(daySel.value);
     daySel.innerHTML = "";
     for (let d=1; d<=maxDay; d++) daySel.innerHTML += `<option value="${d}">${d}</option>`;
     if (cur && cur<=maxDay) daySel.value = cur;
@@ -629,127 +697,144 @@ function buildJalaliPicker(containerId, yearsAhead){
   yearSel.addEventListener("change", refreshDays);
 }
 function readJalaliPicker(containerId){
-  const box = document.getElementById(containerId);
+  const box = $(containerId);
   const jy = parseInt(box.querySelector(".jd-year").value);
   const jm = parseInt(box.querySelector(".jd-month").value);
   const jd = parseInt(box.querySelector(".jd-day").value);
   const g = toGregorian(jy, jm, jd);
-  return { date: new Date(g.gy, g.gm-1, g.gd), label: `${jd} ${JMONTHS[jm-1]} ${jy}` };
+  return { date: new Date(g.gy, g.gm-1, g.gd), gy:g.gy, gm:g.gm, gd:g.gd, label: `${jd} ${JMONTHS[jm-1]} ${jy}` };
 }
 buildJalaliPicker("pcDateBox", 5);
 buildJalaliPicker("fmDateBox", 3);
 
+/* ---------- نوروز / فال / شمارش معکوس ---------- */
 function nowruzCountdown(){
-  const now=new Date(); let year=now.getFullYear(); let target=new Date(year,2,21,0,0,0);
-  if(now>=target) target=new Date(year+1,2,21,0,0,0);
-  const days=Math.ceil((target-now)/(1000*60*60*24));
-  document.getElementById("nowruzBox").innerText=`🌱 ${days} روز تا نوروز مونده`;
+  const now = new Date();
+  const jt = toJalaali(now.getFullYear(), now.getMonth()+1, now.getDate());
+  if (jt.jm === 1 && jt.jd === 1) { $("nowruzBox").innerText = "🎉 نوروزتون مبارک!"; return; }
+  const g = toGregorian(jt.jy + 1, 1, 1);
+  const days = daysUntil(new Date(g.gy, g.gm-1, g.gd));
+  $("nowruzBox").innerText = days === 1 ? "🌱 فقط یه روز تا نوروز مونده!" : `🌱 ${days} روز تا نوروز مونده`;
 }
 const FORTUNES=["امروز روز خوبیه برای شروع یه کار جدید.","یه نفس عمیق بکش، همه‌چی درست می‌شه.","امروز حواست به خودت هم باشه، نه فقط کارها.","یه قدم کوچیک هم جلو رفتنه.","امروز به یکی که دوستش داری پیام بده.","استراحت کردن هم بخشی از پیشرفته.","امروز یه چیز جدید یاد بگیر، هرچقدر کوچیک.","به خودت سخت نگیر، داری خوب پیش می‌ری.","امروز یکی از کارهای عقب‌افتاده رو تموم کن.","یادت باشه آب بخوری امروز 😄","امروز یه لبخند به یکی هدیه بده.","کارهای بزرگ از کارهای کوچیک شروع می‌شن.","امروز رو با انرژی مثبت شروع کن.","یه‌کم به آینده‌ت فکر کن، ولی امروز رو زندگی کن.","امروز حتماً یه استراحت کوتاه بین کارها بذار."];
 function dailyFortune(){
-  const todayKey=new Date().toISOString().slice(0,10);
-  let idx=0; for(let i=0;i<todayKey.length;i++) idx+=todayKey.charCodeAt(i);
-  idx=idx%FORTUNES.length;
-  document.getElementById("fortuneBox").innerText="🔮 فال امروز: "+FORTUNES[idx];
+  const n = new Date();
+  const todayKey = `${n.getFullYear()}-${pad2(n.getMonth()+1)}-${pad2(n.getDate())}`;
+  let idx = 0; for (let i=0;i<todayKey.length;i++) idx += todayKey.charCodeAt(i);
+  idx = idx % FORTUNES.length;
+  $("fortuneBox").innerText = "🔮 فال امروز: " + FORTUNES[idx];
 }
 
 function savePersonalCountdown(){
-  const label=document.getElementById("pcLabel").value.trim();
-  if(!label) return;
-  const picked=readJalaliPicker("pcDateBox");
-  localStorage.setItem("personalCountdown", JSON.stringify({label, date:picked.date.toISOString(), jlabel:picked.label}));
-  document.getElementById("pcLabel").value="";
+  const label = $("pcLabel").value.trim().slice(0, 60);
+  if (!label) { $("pcResult").innerText = "اسم مناسبت رو بنویس"; return; }
+  const picked = readJalaliPicker("pcDateBox");
+  lsSet("personalCountdown", JSON.stringify({label, date:picked.date.toISOString(), jlabel:picked.label}));
+  $("pcLabel").value = "";
   renderPersonalCountdown();
 }
 function renderPersonalCountdown(){
-  const raw=localStorage.getItem("personalCountdown");
-  const box=document.getElementById("pcResult");
-  if(!raw){ box.innerText=""; return; }
-  const {label, date, jlabel}=JSON.parse(raw);
-  const target=new Date(date), now=new Date();
-  const diffDays=Math.ceil((target-now)/(1000*60*60*24));
+  const raw = lsGet("personalCountdown");
+  const box = $("pcResult");
+  if (!raw) { box.innerText = ""; return; }
+  let o; try { o = JSON.parse(raw); } catch (e) { box.innerText = ""; return; }
+  const diffDays = daysUntil(new Date(o.date));
   let mood;
-  if(diffDays<0) mood="گذشت! 😅";
-  else if(diffDays===0) mood="همین امروزه! 😱";
-  else if(diffDays<=3) mood="وای وای وای، خیلی نزدیکه 😰";
-  else if(diffDays<=7) mood="داره نزدیک می‌شه‌ها 😬";
-  else if(diffDays<=30) mood="یه‌کم وقت داری، ولی غافل نشو 🙂";
-  else mood="خیالت راحت باشه، وقت زیاده 😌";
-  box.innerText=`${label} (${jlabel}): ${diffDays} روز مونده — ${mood}`;
+  if (diffDays < 0) mood = "گذشت! 😅";
+  else if (diffDays === 0) mood = "همین امروزه! 😱";
+  else if (diffDays <= 3) mood = "وای وای وای، خیلی نزدیکه 😰";
+  else if (diffDays <= 7) mood = "داره نزدیک می‌شه‌ها 😬";
+  else if (diffDays <= 30) mood = "یه‌کم وقت داری، ولی غافل نشو 🙂";
+  else mood = "خیالت راحت باشه، وقت زیاده 😌";
+  box.innerText = diffDays < 0
+    ? `${o.label} (${o.jlabel}): ${mood}`
+    : `${o.label} (${o.jlabel}): ${diffDays} روز مونده — ${mood}`;
 }
 
-let timerHandle=null;
+/* ---------- تایمر ---------- */
+let timerHandle = null;
 async function startTimer(){
-  const mins=parseFloat(document.getElementById("timerMinutes").value);
-  const label=document.getElementById("timerLabel").value.trim() || "یادآوری";
-  const status=document.getElementById("timerStatus");
-  if(!mins || mins<=0) return;
-  if(timerHandle) clearTimeout(timerHandle);
-  const targetEpoch=Math.floor(Date.now()/1000)+Math.round(mins*60);
-  status.innerText=`⏳ تایمر «${label}» برای ${mins} دقیقه‌ی دیگه فعال شد و به دستگاه هم فرستاده شد.`;
-  try{
-    await fetch(LB_URL, { method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ feed:"device_timer", value: targetEpoch+"|"+label }) });
-  }catch(e){}
-  timerHandle=setTimeout(()=>{ status.innerText=`⏰ ${label}`; alert("⏰ "+label); }, mins*60*1000);
+  const mins = parseFloat($("timerMinutes").value);
+  const label = cleanField($("timerLabel").value).slice(0, 60) || "یادآوری";
+  const status = $("timerStatus");
+  if (!(mins > 0) || mins > 1440) { status.innerText = "تعداد دقیقه رو درست بنویس (بیشتر از صفر و حداکثر ۱۴۴۰)"; return; }
+  if (timerHandle) clearTimeout(timerHandle);
+  const startedAt = Date.now();
+  const ms = Math.round(mins * 60 * 1000);
+  const targetEpoch = Math.floor(startedAt / 1000) + Math.round(mins * 60);
+  status.innerText = "در حال ارسال تایمر به دستگاه...";
+  let sent = true;
+  try { await postFeed("device_timer", targetEpoch + "|" + label); } catch (e) { sent = false; }
+  status.innerText = sent
+    ? `⏳ تایمر «${label}» برای ${mins} دقیقه‌ی دیگه فعال شد و به دستگاه هم فرستاده شد.`
+    : `⏳ تایمر «${label}» برای ${mins} دقیقه‌ی دیگه فقط روی همین مرورگر فعاله؛ به دستگاه نرسید ❌`;
+  timerHandle = setTimeout(() => { status.innerText = `⏰ ${label}`; alert("⏰ " + label); }, Math.max(0, ms - (Date.now() - startedAt)));
 }
 
+/* ---------- پیام به آینده ---------- */
 async function saveFutureMsg(){
-  const text=document.getElementById("fmText").value.trim();
-  const status=document.getElementById("fmStatus");
-  if(!text) return;
-  const picked=readJalaliPicker("fmDateBox");
-  const dateStr=picked.date.toISOString().slice(0,10);
-  status.innerText="در حال ذخیره...";
-  try{
-    await fetch(LB_URL, { method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ feed:"futuremsg", value: dateStr+"|"+text }) });
-    document.getElementById("fmText").value="";
-    status.innerText=`ذخیره شد ✅ (${picked.label}) همون روز که سایت رو باز کنی نشونت می‌دم.`;
-  }catch(e){ status.innerText="خطا در ذخیره‌سازی"; }
+  const text = $("fmText").value.trim().slice(0, 300);
+  const status = $("fmStatus");
+  if (!text) { status.innerText = "اول پیامت رو بنویس"; return; }
+  const picked = readJalaliPicker("fmDateBox");
+  if (daysUntil(picked.date) < 0) { status.innerText = "تاریخ باید امروز یا بعد از امروز باشه"; return; }
+  const dateStr = `${picked.gy}-${pad2(picked.gm)}-${pad2(picked.gd)}`;
+  status.innerText = "در حال ذخیره...";
+  try {
+    await postFeed("futuremsg", dateStr + "|" + text);
+    $("fmText").value = "";
+    status.innerText = `ذخیره شد ✅ (${picked.label}) همون روز که سایت رو باز کنی نشونت می‌دم.`;
+  } catch (e) { status.innerText = "خطا در ذخیره‌سازی ❌"; }
 }
 async function checkFutureMsg(){
-  try{
-    const resp=await fetch(`${LB_URL}?feed=futuremsg&limit=1`);
-    const data=await resp.json();
-    if(!data.length) return;
-    const [dateStr, ...rest]=data[0].value.split("|");
-    const text=rest.join("|");
-    const [yy,mm,dd]=dateStr.split("-").map(Number);
-    const target=new Date(yy, mm-1, dd);
-    const now=new Date();
-    const shownKey="futuremsgShown_"+dateStr;
-    if(now>=target && !localStorage.getItem(shownKey)){
-      localStorage.setItem(shownKey,"1");
-      setTimeout(()=>alert("💌 پیام از گذشته:\n\n"+text), 500);
-    }
-  }catch(e){}
+  try {
+    const resp = await fetch(`${LB_URL}?feed=futuremsg&limit=50`);
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (!Array.isArray(data)) return;
+    const due = [];
+    data.slice().reverse().forEach(d => {
+      const v = (d && typeof d.value === "string") ? d.value : "";
+      const m = v.match(/^(\d{4})-(\d{2})-(\d{2})\|([\s\S]*)$/);
+      if (!m) return;
+      const target = new Date(+m[1], +m[2]-1, +m[3]);
+      if (new Date() < target) return;
+      const key = "futuremsgShown_" + m[1] + "-" + m[2] + "-" + m[3] + "_" + hash32(m[4]);
+      if (lsGet(key)) return;
+      lsSet(key, "1");
+      due.push(m[4]);
+    });
+    if (due.length) setTimeout(() => alert("💌 پیام از گذشته:\n\n" + due.join("\n\n———\n\n")), 500);
+  } catch (e) {}
 }
 
 nowruzCountdown(); dailyFortune(); renderPersonalCountdown(); checkFutureMsg();
 
-function saveSpeakToggle(){
-  const on=document.getElementById("speakToggle").checked;
-  localStorage.setItem("aiSpeakEnabled", on ? "1":"0");
-}
-if(localStorage.getItem("aiSpeakEnabled")==="1") document.getElementById("speakToggle").checked=true;
+/* ---------- دستیار هوشمند ---------- */
+function saveSpeakToggle(){ lsSet("aiSpeakEnabled", $("speakToggle").checked ? "1" : "0"); }
+if (lsGet("aiSpeakEnabled") === "1") $("speakToggle").checked = true;
 
 function addMsg(text, who){
-  const box=document.getElementById("chatBox");
-  const div=document.createElement("div");
-  div.className="msg "+who; div.innerText=text;
-  box.appendChild(div); box.scrollTop=box.scrollHeight;
+  const box = $("chatBox");
+  const el = document.createElement("div");
+  el.className = "msg " + who; el.innerText = text;
+  box.appendChild(el); box.scrollTop = box.scrollHeight;
+  return el;
 }
 
+let chatBusy = false;
 function sendChat(){
-  const input=document.getElementById("chatInput");
-  const text=input.value.trim();
-  if(!text) return;
-  addMsg(text,"user"); input.value=""; addMsg("...","ai");
-  const speakOn=document.getElementById("speakToggle").checked;
+  if (chatBusy) return;
+  const input = $("chatInput");
+  const text = input.value.trim().slice(0, 500);
+  if (!text) return;
+  chatBusy = true; $("sendBtn").disabled = true;
+  addMsg(text, "user"); input.value = "";
+  const pending = addMsg("...", "ai");
+  const speakOn = $("speakToggle").checked;
 
   const ctrl = new AbortController();
-  const killer = setTimeout(() => ctrl.abort(), 15000);
+  const killer = setTimeout(() => ctrl.abort(), 20000);
 
   fetch(AI_URL, {
     method:"POST",
@@ -757,41 +842,35 @@ function sendChat(){
     body:JSON.stringify({text, speak:speakOn}),
     signal: ctrl.signal
   })
-  .then(r=>{
-    if(!r.ok) throw new Error("bad-status");
-    return r.json();
-  })
-  .then(data=>{
+  .then(r => { if (!r.ok) throw new Error("bad-status"); return r.json(); })
+  .then(data => { pending.innerText = (data && data.answer) || "جوابی نیومد"; })
+  .catch(() => { pending.innerText = "اتصال با هوش مصنوعی برقرار نشد، دوباره امتحان کن"; })
+  .finally(() => {
     clearTimeout(killer);
-    const box=document.getElementById("chatBox"); box.removeChild(box.lastChild);
-    addMsg(data.answer || "جوابی نیومد","ai");
-  })
-  .catch(()=>{
-    clearTimeout(killer);
-    const box=document.getElementById("chatBox"); box.removeChild(box.lastChild);
-    addMsg("اتصال با هوش مصنوعی برقرار نشد، دوباره امتحان کن","ai");
+    chatBusy = false; $("sendBtn").disabled = false;
+    $("chatBox").scrollTop = $("chatBox").scrollHeight;
   });
 }
+$("chatInput").addEventListener("keydown", e => { if (e.key === "Enter") sendChat(); });
 
-document.getElementById("chatInput").addEventListener("keydown", e=>{ if(e.key==="Enter") sendChat(); });
-
-let recognition=null, isListening=false;
+let recognition = null, isListening = false;
+function micOff(){ isListening = false; $("micBtn").classList.remove("listening"); }
 function initRecognition(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR) return null;
-  const r=new SR(); r.lang="fa-IR"; r.continuous=false; r.interimResults=false; r.maxAlternatives=1;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  const r = new SR(); r.lang = "fa-IR"; r.continuous = false; r.interimResults = false; r.maxAlternatives = 1;
+  r.onresult = e => { $("chatInput").value = e.results[0][0].transcript; sendChat(); };
+  r.onerror = micOff;
+  r.onend = micOff;
   return r;
 }
 function toggleMic(){
-  if(isListening){ if(recognition) recognition.stop(); return; }
-  if(!recognition) recognition=initRecognition();
-  if(!recognition){ alert("متاسفانه مرورگرت از تشخیص صدا پشتیبانی نمی‌کنه"); return; }
-  isListening=true; document.getElementById("micBtn").classList.add("listening");
-  recognition.onresult=e=>{ document.getElementById("chatInput").value=e.results[0][0].transcript; sendChat(); };
-  recognition.onerror=()=>{ isListening=false; document.getElementById("micBtn").classList.remove("listening"); };
-  recognition.onend=()=>{ isListening=false; document.getElementById("micBtn").classList.remove("listening"); };
-  try{ recognition.start(); }catch(e){ isListening=false; document.getElementById("micBtn").classList.remove("listening"); }
+  if (isListening) { if (recognition) recognition.stop(); return; }
+  if (!recognition) recognition = initRecognition();
+  if (!recognition) { alert("متاسفانه مرورگرت از تشخیص صدا پشتیبانی نمی‌کنه"); return; }
+  isListening = true; $("micBtn").classList.add("listening");
+  try { recognition.start(); } catch (e) { micOff(); }
 }
 </script>
 </body>
-  </html>
+</html>
