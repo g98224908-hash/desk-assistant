@@ -396,6 +396,7 @@
 
 <div id="toast" class="toast">ارسال شد</div>
 
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script>
 const PROXY_URL = "https://desk-assistant-proxy.kdkdke126.workers.dev";
 const AI_URL = "https://desk-assistant-ai.kdkdke126.workers.dev";
@@ -456,7 +457,7 @@ async function getJson(url){
 
 /* ---------- قفل ---------- */
 let futureChecked=false;
-function showApp(){ $("lockScreen").style.display="none"; $("appContent").style.display="block"; if(!futureChecked){ futureChecked=true; setTimeout(()=>{ try{ checkFutureMsg(); }catch(e){} }, 300); } }
+function showApp(){ $("lockScreen").style.display="none"; $("appContent").style.display="block"; try{ mqttConnect(); }catch(e){} if(!futureChecked){ futureChecked=true; setTimeout(()=>{ try{ checkFutureMsg(); }catch(e){} }, 300); } }
 async function checkPass(){
   const val=$("passInput").value;
   if(!(window.crypto && crypto.subtle)){ $("lockError").innerText="این صفحه باید با https باز بشه"; return; }
@@ -489,7 +490,66 @@ document.addEventListener("pointerdown", warmUp, {passive:true});
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) warmUp(); });
 warmUp();
 
+/* ---------- MQTT (سریع) ---------- */
+const AIO_USER = "Jsjsis";
+const AIO_TOPIC = AIO_USER + "/feeds/command";
+let mqttClient = null, mqttReady = false, keySkipped = false;
+
+function askKey(){
+  const k = prompt("کلید Adafruit IO رو یک بار پیست کن (فقط روی همین گوشی ذخیره می‌شه):");
+  if (k && k.trim()){ lsSet("aio_key", k.trim()); return k.trim(); }
+  keySkipped = true; return null;
+}
+function mqttConnect(){
+  if (mqttClient || typeof mqtt === "undefined") return;
+  const key = lsGet("aio_key"); if (!key) return;
+  mqttClient = mqtt.connect("wss://io.adafruit.com:443/mqtt", {
+    username: AIO_USER, password: key,
+    clientId: "desk_" + Math.random().toString(16).slice(2, 10),
+    keepalive: 30, connectTimeout: 8000, reconnectPeriod: 3000
+  });
+  mqttClient.on("connect", () => { mqttReady = true; });
+  mqttClient.on("close", () => { mqttReady = false; });
+  mqttClient.on("error", (e) => {
+    if (e && /not authori|bad user/i.test(String(e.message || e))) {
+      try { localStorage.removeItem("aio_key"); } catch (x) {}
+      try { mqttClient.end(true); } catch (x) {}
+      mqttClient = null; mqttReady = false;
+    }
+  });
+}
+function mqttSend(id){
+  return new Promise(resolve => {
+    let waited = 0;
+    (function go(){
+      if (!mqttClient) return resolve(false);
+      if (!mqttReady){
+        waited += 100;
+        if (waited > 3000) return resolve(false);
+        return setTimeout(go, 100);
+      }
+      let done = false;
+      const t = setTimeout(() => { if (!done){ done = true; resolve(false); } }, 4000);
+      mqttClient.publish(AIO_TOPIC, String(id), { qos: 1 }, err => {
+        if (done) return; done = true; clearTimeout(t); resolve(!err);
+      });
+    })();
+  });
+}
+
 function btn(id){
+  const toast = $("toast");
+  toast.innerText = "در حال ارسال...";
+  showToast(16000);
+  if (!lsGet("aio_key") && !keySkipped) askKey();
+  if (lsGet("aio_key") && !mqttClient) mqttConnect();
+  return mqttSend(id).then(ok => {
+    if (ok){ toast.innerText = "ارسال شد ✅"; showToast(); return true; }
+    return btnViaWorker(id);   // راه قبلی اگر MQTT وصل نشد
+  });
+}
+
+function btnViaWorker(id){
   const toast=$("toast");
   toast.innerText="در حال ارسال... (اتصال ممکنه چند ثانیه طول بکشه)";
   showToast(16000);
