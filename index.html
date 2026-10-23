@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>دستیار رومیزی</title>
+<link rel="preconnect" href="https://desk-assistant-proxy.kdkdke126.workers.dev" crossorigin>
+<link rel="preconnect" href="https://leaderboard-proxy.kdkdke126.workers.dev" crossorigin>
+<link rel="preconnect" href="https://desk-assistant-ai.kdkdke126.workers.dev" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -416,7 +419,7 @@ async function postFeed(feed, value){
   let lastErr = new Error("network");
   for (let n=1; n<=3; n++){
     const ctrl=new AbortController();
-    const killer=setTimeout(()=>ctrl.abort(), 8000);
+    const killer=setTimeout(()=>ctrl.abort(), 15000);
     try{
       const r=await fetch(LB_URL, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({feed, value}), signal:ctrl.signal });
       clearTimeout(killer);
@@ -436,7 +439,7 @@ async function getJson(url){
   let lastErr;
   for (let n=1; n<=3; n++){
     const ctrl=new AbortController();
-    const killer=setTimeout(()=>ctrl.abort(), 8000);
+    const killer=setTimeout(()=>ctrl.abort(), 15000);
     try{
       const r=await fetch(url, { signal:ctrl.signal, cache:"no-store" });
       clearTimeout(killer);
@@ -474,14 +477,27 @@ function showToast(ms){
   clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>t.classList.remove("show"), ms||1800);
 }
+function warmUp(){
+  [PROXY_URL, LB_URL, AI_URL].forEach(u=>{
+    const l=document.createElement("link");
+    l.rel="preconnect"; l.href=u; l.crossOrigin="anonymous";
+    document.head.appendChild(l);
+    setTimeout(()=>{ try{ l.remove(); }catch(e){} }, 20000);
+  });
+}
+document.addEventListener("pointerdown", warmUp, {passive:true});
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) warmUp(); });
+warmUp();
+
 function btn(id){
   const toast=$("toast");
-  toast.innerText="در حال ارسال...";
-  showToast(6000);
+  toast.innerText="در حال ارسال... (اتصال ممکنه چند ثانیه طول بکشه)";
+  showToast(16000);
   const url=PROXY_URL+"/?id="+encodeURIComponent(id);
   function attempt(n){
     const ctrl=new AbortController();
-    const killer=setTimeout(()=>ctrl.abort(), 5000);
+    const t0=Date.now();
+    const killer=setTimeout(()=>ctrl.abort(), 15000);
     return fetch(url, { signal: ctrl.signal, cache:"no-store" })
       .then(r=>{
         clearTimeout(killer);
@@ -491,10 +507,11 @@ function btn(id){
       })
       .catch(()=>{
         clearTimeout(killer);
-        if(n<3){
+        const fast = (Date.now()-t0) < 8000;   // خطای سریع = قطع شدن اتصال؛ تایم‌اوت کامل تکرار نمی‌شه
+        if(fast && n<3){
           toast.innerText="دوباره تلاش می‌کنم...";
-          showToast(6000);
-          return new Promise(res=>setTimeout(res, 400)).then(()=>attempt(n+1));
+          showToast(16000);
+          return new Promise(res=>setTimeout(res, 700)).then(()=>attempt(n+1));
         }
         toast.innerText="اتصال برقرار نشد، دوباره امتحان کن";
         showToast();
