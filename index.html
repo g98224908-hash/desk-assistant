@@ -413,12 +413,47 @@ async function sha256Hex(s){
 function dayNumber(d){ return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())/86400000); }
 function daysUntil(target){ return dayNumber(target)-dayNumber(new Date()); }
 async function postFeed(feed, value){
-  const r=await fetch(LB_URL, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({feed, value}) });
-  if(!r.ok) throw new Error("bad-status");
+  let lastErr = new Error("network");
+  for (let n=1; n<=3; n++){
+    const ctrl=new AbortController();
+    const killer=setTimeout(()=>ctrl.abort(), 8000);
+    try{
+      const r=await fetch(LB_URL, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({feed, value}), signal:ctrl.signal });
+      clearTimeout(killer);
+      if(!r.ok) throw new Error("bad-status");
+      return;
+    }catch(e){
+      clearTimeout(killer);
+      lastErr = e;
+      if (e && e.message === "bad-status") break; // خطای سرور: تکرار نکن تا دوبار ثبت نشه
+      await new Promise(res=>setTimeout(res, 500));
+    }
+  }
+  throw lastErr;
+}
+
+async function getJson(url){
+  let lastErr;
+  for (let n=1; n<=3; n++){
+    const ctrl=new AbortController();
+    const killer=setTimeout(()=>ctrl.abort(), 8000);
+    try{
+      const r=await fetch(url, { signal:ctrl.signal, cache:"no-store" });
+      clearTimeout(killer);
+      if(!r.ok) throw new Error("bad-status");
+      return await r.json();
+    }catch(e){
+      clearTimeout(killer);
+      lastErr = e;
+      await new Promise(res=>setTimeout(res, 500));
+    }
+  }
+  throw lastErr;
 }
 
 /* ---------- قفل ---------- */
-function showApp(){ $("lockScreen").style.display="none"; $("appContent").style.display="block"; }
+let futureChecked=false;
+function showApp(){ $("lockScreen").style.display="none"; $("appContent").style.display="block"; if(!futureChecked){ futureChecked=true; setTimeout(()=>{ try{ checkFutureMsg(); }catch(e){} }, 300); } }
 async function checkPass(){
   const val=$("passInput").value;
   if(!(window.crypto && crypto.subtle)){ $("lockError").innerText="این صفحه باید با https باز بشه"; return; }
@@ -431,34 +466,42 @@ if (lsGet("deskAssistantUnlocked") === PASS_HASH) showApp();
 
 /* ---------- دکمه‌ها ---------- */
 let toastTimer=null;
-function showToast(){
+function showToast(ms){
   const t=$("toast");
   t.classList.remove("show");
   void t.offsetWidth;
   t.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>t.classList.remove("show"), 1400);
+  toastTimer=setTimeout(()=>t.classList.remove("show"), ms||1800);
 }
 function btn(id){
   const toast=$("toast");
   toast.innerText="در حال ارسال...";
-  showToast();
-  const ctrl=new AbortController();
-  const killer=setTimeout(()=>ctrl.abort(), 7000);
-  return fetch(PROXY_URL+"/?id="+encodeURIComponent(id), { signal: ctrl.signal })
-    .then(r=>r.text().then(t=>({ok:r.ok, t})))
-    .then(({ok,t})=>{
-      clearTimeout(killer);
-      toast.innerText = ok ? (t.slice(0,60) || "ارسال شد") : "خطا از سمت سرور، دوباره امتحان کن";
-      showToast();
-      return ok;
-    })
-    .catch(()=>{
-      clearTimeout(killer);
-      toast.innerText="اتصال برقرار نشد، دوباره امتحان کن";
-      showToast();
-      return false;
-    });
+  showToast(6000);
+  const url=PROXY_URL+"/?id="+encodeURIComponent(id);
+  function attempt(n){
+    const ctrl=new AbortController();
+    const killer=setTimeout(()=>ctrl.abort(), 5000);
+    return fetch(url, { signal: ctrl.signal, cache:"no-store" })
+      .then(r=>{
+        clearTimeout(killer);
+        toast.innerText = r.ok ? "ارسال شد ✅" : "خطا از سمت سرور، دوباره امتحان کن";
+        showToast();
+        return r.ok;
+      })
+      .catch(()=>{
+        clearTimeout(killer);
+        if(n<3){
+          toast.innerText="دوباره تلاش می‌کنم...";
+          showToast(6000);
+          return new Promise(res=>setTimeout(res, 400)).then(()=>attempt(n+1));
+        }
+        toast.innerText="اتصال برقرار نشد، دوباره امتحان کن";
+        showToast();
+        return false;
+      });
+  }
+  return attempt(1);
 }
 
 function setVolume(level) {
@@ -596,9 +639,7 @@ async function showLeaderboard() {
   box.style.display = "block";
   box.innerText = "در حال بارگذاری...";
   try {
-    const resp = await fetch(`${LB_URL}?feed=leaderboard&limit=50`);
-    if (!resp.ok) throw new Error("bad-status");
-    const data = await resp.json();
+    const data = await getJson(`${LB_URL}?feed=leaderboard&limit=50`);
     if (!Array.isArray(data)) throw new Error("bad-data");
     const best = new Map();
     data.forEach(d => {
@@ -758,7 +799,7 @@ async function startTimer(){
   const label = cleanField($("timerLabel").value).slice(0, 60) || "یادآوری";
   const status = $("timerStatus");
   if (!(mins > 0) || mins > 1440) { status.innerText = "تعداد دقیقه رو درست بنویس (بیشتر از صفر و حداکثر ۱۴۴۰)"; return; }
-  if (timerHandle) clearTimeout(timerHandle);
+  if (timerHandle) clearInterval(timerHandle);
   const startedAt = Date.now();
   const ms = Math.round(mins * 60 * 1000);
   const targetEpoch = Math.floor(startedAt / 1000) + Math.round(mins * 60);
@@ -768,7 +809,13 @@ async function startTimer(){
   status.innerText = sent
     ? `⏳ تایمر «${label}» برای ${mins} دقیقه‌ی دیگه فعال شد و به دستگاه هم فرستاده شد.`
     : `⏳ تایمر «${label}» برای ${mins} دقیقه‌ی دیگه فقط روی همین مرورگر فعاله؛ به دستگاه نرسید ❌`;
-  timerHandle = setTimeout(() => { status.innerText = `⏰ ${label}`; alert("⏰ " + label); }, Math.max(0, ms - (Date.now() - startedAt)));
+  const endAt = startedAt + ms;
+  timerHandle = setInterval(() => {
+    if (Date.now() >= endAt) {
+      clearInterval(timerHandle); timerHandle = null;
+      status.innerText = `⏰ ${label}`; alert("⏰ " + label);
+    }
+  }, 1000);
 }
 
 /* ---------- پیام به آینده ---------- */
@@ -788,9 +835,7 @@ async function saveFutureMsg(){
 }
 async function checkFutureMsg(){
   try {
-    const resp = await fetch(`${LB_URL}?feed=futuremsg&limit=50`);
-    if (!resp.ok) return;
-    const data = await resp.json();
+    const data = await getJson(`${LB_URL}?feed=futuremsg&limit=50`);
     if (!Array.isArray(data)) return;
     const due = [];
     data.slice().reverse().forEach(d => {
@@ -808,7 +853,7 @@ async function checkFutureMsg(){
   } catch (e) {}
 }
 
-nowruzCountdown(); dailyFortune(); renderPersonalCountdown(); checkFutureMsg();
+nowruzCountdown(); dailyFortune(); renderPersonalCountdown();
 
 /* ---------- دستیار هوشمند ---------- */
 function saveSpeakToggle(){ lsSet("aiSpeakEnabled", $("speakToggle").checked ? "1" : "0"); }
@@ -834,14 +879,21 @@ function sendChat(){
   const speakOn = $("speakToggle").checked;
 
   const ctrl = new AbortController();
-  const killer = setTimeout(() => ctrl.abort(), 20000);
-
-  fetch(AI_URL, {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({text, speak:speakOn}),
-    signal: ctrl.signal
-  })
+  const killer = setTimeout(() => ctrl.abort(), 25000);
+  let tried = 0;
+  function ask(){
+    tried++;
+    return fetch(AI_URL, {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({text, speak:speakOn}),
+      signal: ctrl.signal
+    }).catch(err => {
+      if (tried < 2 && !ctrl.signal.aborted) return new Promise(res=>setTimeout(res, 600)).then(ask);
+      throw err;
+    });
+  }
+  ask()
   .then(r => { if (!r.ok) throw new Error("bad-status"); return r.json(); })
   .then(data => { pending.innerText = (data && data.answer) || "جوابی نیومد"; })
   .catch(() => { pending.innerText = "اتصال با هوش مصنوعی برقرار نشد، دوباره امتحان کن"; })
@@ -860,7 +912,11 @@ function initRecognition(){
   if (!SR) return null;
   const r = new SR(); r.lang = "fa-IR"; r.continuous = false; r.interimResults = false; r.maxAlternatives = 1;
   r.onresult = e => { $("chatInput").value = e.results[0][0].transcript; sendChat(); };
-  r.onerror = micOff;
+  r.onerror = e => {
+    micOff();
+    if (e && (e.error === "not-allowed" || e.error === "service-not-allowed")) alert("اجازه‌ی میکروفون داده نشده. از تنظیمات مرورگر اجازه بده.");
+    else if (e && e.error === "no-speech") addMsg("صدایی نشنیدم، دوباره امتحان کن 🎤", "ai");
+  };
   r.onend = micOff;
   return r;
 }
