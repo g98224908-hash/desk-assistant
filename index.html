@@ -506,7 +506,7 @@ function mqttConnect(){
   mqttClient = mqtt.connect("wss://io.adafruit.com:443/mqtt", {
     username: AIO_USER, password: key,
     clientId: "desk_" + Math.random().toString(16).slice(2, 10),
-    keepalive: 30, connectTimeout: 8000, reconnectPeriod: 3000
+    keepalive: 15, connectTimeout: 6000, reconnectPeriod: 1000
   });
   mqttClient.on("connect", () => { mqttReady = true; });
   mqttClient.on("close", () => { mqttReady = false; });
@@ -518,24 +518,39 @@ function mqttConnect(){
     }
   });
 }
+function mqttKick(){
+  if (!lsGet("aio_key")) return;
+  if (!mqttClient){ mqttConnect(); return; }
+  if (!mqttClient.connected && !mqttClient.reconnecting){ try{ mqttClient.reconnect(); }catch(e){} }
+}
+function mqttReset(){
+  const c = mqttClient; mqttClient = null; mqttReady = false;
+  try{ c && c.end(true); }catch(e){}
+  setTimeout(mqttConnect, 200);
+}
 function mqttSend(id){
   return new Promise(resolve => {
     let waited = 0;
+    mqttKick();
     (function go(){
       if (!mqttClient) return resolve(false);
       if (!mqttReady){
-        waited += 100;
-        if (waited > 3000) return resolve(false);
-        return setTimeout(go, 100);
+        waited += 50;
+        if (waited > 2500) return resolve(false);
+        return setTimeout(go, 50);
       }
       let done = false;
-      const t = setTimeout(() => { if (!done){ done = true; resolve(false); } }, 4000);
+      const t = setTimeout(() => { if (!done){ done = true; mqttReset(); resolve(false); } }, 3000);
       mqttClient.publish(AIO_TOPIC, String(id), { qos: 1 }, err => {
         if (done) return; done = true; clearTimeout(t); resolve(!err);
       });
     })();
   });
 }
+document.addEventListener("visibilitychange", () => { if (!document.hidden) mqttKick(); });
+document.addEventListener("pointerdown", mqttKick, { passive: true });
+window.addEventListener("online", mqttKick);
+mqttKick();
 
 function btn(id){
   const toast = $("toast");
